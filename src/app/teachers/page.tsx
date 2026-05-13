@@ -36,10 +36,9 @@ export default function TeachersPage() {
 
   const fetchTeachers = async () => {
     setLoading(true);
-    // On récupère les profs, leurs profils et on compte les entrées dans la table 'courses'
     const { data } = await supabase
       .from('teachers')
-      .select('*, profiles(*), courses(count)');
+      .select('*, profiles(*)');
     
     if (data) setTeachers(data);
     setLoading(false);
