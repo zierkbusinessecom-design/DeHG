@@ -127,40 +127,37 @@ export default function TeacherProfilePage() {
 
         {/* Info Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Colonne de GAUCHE : Biographie */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Combined Bio & Specialties Section */}
-            <div className="glass-card p-10 rounded-[2.5rem] border border-white/10 overflow-hidden relative group">
+            <div className="glass-card p-10 rounded-[2.5rem] border border-white/10 overflow-hidden relative group h-full">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-primary/10 transition-all duration-500" />
               
-              <div className="relative z-10 space-y-10">
-                {/* Specialties Section */}
-                <div>
-                  <h3 className="text-xl font-black text-white mb-6 uppercase tracking-tight flex items-center gap-4">
-                    <Briefcase className="w-6 h-6 text-primary" /> Spécialités du Professeur
-                  </h3>
-                  <div className="flex flex-wrap gap-3">
-                    {teacher.specialty ? teacher.specialty.split(',').map((s: string, i: number) => (
-                      <span key={i} className="px-5 py-2.5 bg-primary/10 text-primary text-[11px] font-black rounded-2xl border border-primary/20 uppercase tracking-widest hover:bg-primary hover:text-white transition-all cursor-default">
-                        {s.trim()}
-                      </span>
-                    )) : (
-                      <p className="text-muted-foreground italic">Aucune spécialité renseignée.</p>
-                    )}
-                  </div>
-                </div>
+              <div className="relative z-10">
+                <h3 className="text-xl font-black text-white mb-6 uppercase tracking-tight flex items-center gap-4">
+                  <Award className="w-6 h-6 text-primary" /> Biographie & Expérience
+                </h3>
+                <p className="text-muted-foreground leading-relaxed italic text-lg">
+                  {teacher.bio || "Aucune biographie renseignée pour ce professeur."}
+                </p>
+              </div>
+            </div>
+          </div>
 
-                {/* Elegant Separator */}
-                <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
-                {/* Biography Section */}
-                <div>
-                  <h3 className="text-xl font-black text-white mb-6 uppercase tracking-tight flex items-center gap-4">
-                    <Award className="w-6 h-6 text-primary" /> Biographie & Expérience
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed italic text-lg">
-                    {teacher.bio || "Aucune biographie renseignée pour ce professeur."}
-                  </p>
-                </div>
+          {/* Colonne de DROITE : Spécialités */}
+          <div className="space-y-8">
+            <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 h-full">
+              <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
+                <Briefcase className="w-5 h-5 text-primary" /> Spécialités
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {teacher.specialty ? teacher.specialty.split(',').map((s: string, i: number) => (
+                  <span key={i} className="px-4 py-2 bg-primary/10 text-primary text-[10px] font-black rounded-xl border border-primary/20 uppercase tracking-widest hover:bg-primary hover:text-white transition-all cursor-default w-full text-center">
+                    {s.trim()}
+                  </span>
+                )) : (
+                  <p className="text-xs text-muted-foreground italic">Aucune spécialité renseignée.</p>
+                )}
               </div>
             </div>
           </div>
