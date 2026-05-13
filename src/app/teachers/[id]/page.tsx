@@ -164,7 +164,6 @@ export default function TeacherProfilePage() {
               </div>
             </div>
           </div>
-          </div>
         </div>
       </div>
     </DashboardLayout>
