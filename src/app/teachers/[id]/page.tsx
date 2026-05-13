@@ -4,26 +4,20 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useTranslation } from '@/context/TranslationContext';
-import { 
-  User, 
-  ChevronLeft, 
-  Edit, 
-  Trash2, 
-  Mail, 
-  Phone, 
+import {
+  User,
+  ChevronLeft,
+  Edit,
+  Trash2,
+  Mail,
+  Phone,
   Briefcase,
-  Calendar,
-  Clock,
-  BookOpen,
   Award,
   CheckCircle2,
   MessageCircle,
-  PlusCircle,
-  X
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
-import { Portal } from '@/components/Portal';
 import { useSchoolId } from '@/hooks/useSchoolId';
 
 export default function TeacherProfilePage() {
@@ -31,16 +25,7 @@ export default function TeacherProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const [teacher, setTeacher] = useState<any>(null);
-  const [assignedCourses, setAssignedCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAssignModal, setShowAssignModal] = useState(false);
-  
-  // Données pour le modal
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const [isAssigning, setIsAssigning] = useState(false);
 
   const { schoolId: school_id } = useSchoolId();
   const supabase = createClient();
@@ -50,59 +35,15 @@ export default function TeacherProfilePage() {
   }, [id]);
 
   const fetchTeacherData = async () => {
-    // 1. Infos prof
+    // Infos prof
     const { data: teacherData } = await supabase
       .from('teachers')
       .select('*, profiles(*)')
       .eq('id', id)
       .single();
-    
+
     if (teacherData) setTeacher(teacherData);
-
-    // 2. Matières assignées (Cours)
-    const { data: coursesData } = await supabase
-      .from('courses')
-      .select('*, subjects(*), groups(*)')
-      .eq('teacher_id', id);
-    
-    if (coursesData) setAssignedCourses(coursesData);
-
-    // 3. Charger sujets et groupes pour le modal
-    const { data: subs } = await supabase.from('subjects').select('*');
-    const { data: grps } = await supabase.from('groups').select('*');
-    if (subs) setSubjects(subs);
-    if (grps) setGroups(grps);
-
     setLoading(false);
-  };
-
-  const handleAssignSubject = async () => {
-    if (!selectedSubject || !selectedGroup || !school_id) return;
-    setIsAssigning(true);
-
-    try {
-      const { error } = await supabase
-        .from('courses')
-        .insert([{
-          school_id,
-          teacher_id: id,
-          subject_id: selectedSubject,
-          group_id: selectedGroup,
-          academic_year: '2023-2024'
-        }]);
-
-      if (error) throw error;
-      
-      setShowAssignModal(false);
-      setSelectedSubject('');
-      setSelectedGroup('');
-      fetchTeacherData();
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de l'assignation");
-    } finally {
-      setIsAssigning(false);
-    }
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-96"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div></DashboardLayout>;
@@ -113,23 +54,23 @@ export default function TeacherProfilePage() {
       <div className="max-w-6xl mx-auto page-transition pb-20">
         {/* Header Navigation */}
         <div className="flex items-center justify-between mb-10">
-          <button 
+          <button
             onClick={() => router.push('/teachers')}
             className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl text-muted-foreground hover:text-white transition-all border border-white/5 flex items-center gap-2 text-xs font-black uppercase tracking-widest"
           >
             <ChevronLeft className="w-4 h-4" /> Retour
           </button>
-          
+
           <div className="flex gap-4">
-            <button 
+            <button
               onClick={() => router.push(`/teachers/edit/${teacher.id}`)}
               className="btn-secondary p-3.5 hover:text-primary transition-colors"
             >
               <Edit className="w-5 h-5" />
             </button>
-            <button 
+            <button
               onClick={() => {
-                if(confirm("Supprimer ce professeur ?")) {
+                if (confirm("Supprimer ce professeur ?")) {
                   supabase.from('teachers').delete().eq('id', teacher.id).then(() => router.push('/teachers'));
                 }
               }}
@@ -143,12 +84,12 @@ export default function TeacherProfilePage() {
         {/* Profile Card Header */}
         <div className="glass-card p-12 rounded-[3rem] border border-white/10 mb-10 relative overflow-hidden group">
           <div className="absolute -right-20 -top-20 w-80 h-80 bg-primary/5 rounded-full blur-[100px] group-hover:bg-primary/10 transition-all duration-700" />
-          
+
           <div className="flex flex-col md:flex-row items-center gap-10 relative z-10">
             <div className="w-40 h-40 rounded-[3rem] bg-gradient-to-br from-primary/30 to-transparent flex items-center justify-center text-primary font-black text-6xl border-2 border-primary/20 shadow-2xl">
               {teacher.profiles?.first_name?.[0]}{teacher.profiles?.last_name?.[0]}
             </div>
-            
+
             <div className="text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start gap-4 mb-2">
                 <span className="px-4 py-1 bg-white/5 text-white/40 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/5">{teacher.status}</span>
@@ -157,7 +98,6 @@ export default function TeacherProfilePage() {
                 {teacher.profiles?.first_name} {teacher.profiles?.last_name}
                 <CheckCircle2 className="w-8 h-8 text-primary fill-primary/10" />
               </h1>
-              <p className="text-xl text-primary font-bold tracking-widest uppercase opacity-80">{teacher.specialty}</p>
               
               <div className="flex flex-wrap justify-center md:justify-start gap-8 mt-8 text-muted-foreground">
                 <div className="flex items-center gap-3">
@@ -176,18 +116,34 @@ export default function TeacherProfilePage() {
         {/* Info Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <div className="glass-card p-10 rounded-[2.5rem] border border-white/10">
-              <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tight flex items-center gap-4">
-                <Award className="w-6 h-6 text-primary" /> Spécialités du Professeur
-              </h3>
-              <div className="flex flex-wrap gap-3">
-                {teacher.specialty ? teacher.specialty.split(',').map((s: string, i: number) => (
-                  <span key={i} className="px-5 py-2.5 bg-primary/10 text-primary text-xs font-black rounded-2xl border border-primary/20 uppercase tracking-widest">
-                    {s.trim()}
-                  </span>
-                )) : (
-                  <p className="text-muted-foreground italic">Aucune spécialité renseignée.</p>
-                )}
+            {/* Combined Bio & Specialties Section */}
+            <div className="glass-card p-10 rounded-[2.5rem] border border-white/10 overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-primary/10 transition-all duration-500" />
+              
+              <div className="flex flex-col md:flex-row gap-10 relative z-10">
+                <div className="flex-1">
+                  <h3 className="text-xl font-black text-white mb-6 uppercase tracking-tight flex items-center gap-4">
+                    <Award className="w-6 h-6 text-primary" /> Biographie & Expérience
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed italic">
+                    {teacher.bio || "Aucune biographie renseignée pour ce professeur."}
+                  </p>
+                </div>
+                
+                <div className="md:w-64 shrink-0">
+                  <h3 className="text-xs font-black text-white/40 mb-4 uppercase tracking-[0.2em] flex items-center gap-2">
+                    <Briefcase className="w-3.5 h-3.5 text-primary" /> Spécialités
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {teacher.specialty ? teacher.specialty.split(',').map((s: string, i: number) => (
+                      <span key={i} className="px-3 py-1.5 bg-white/5 text-white/70 text-[10px] font-bold rounded-xl border border-white/5 uppercase tracking-tighter hover:border-primary/30 transition-colors">
+                        {s.trim()}
+                      </span>
+                    )) : (
+                      <p className="text-white/20 text-[10px] italic">Aucune</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -226,15 +182,6 @@ export default function TeacherProfilePage() {
                   <p className="text-muted-foreground font-bold italic">Aucun cours assigné pour le moment.</p>
                 </div>
               )}
-            </div>
-
-            <div className="glass-card p-10 rounded-[2.5rem] border border-white/10">
-              <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tight flex items-center gap-4">
-                <Briefcase className="w-6 h-6 text-primary" /> Biographie & Expérience
-              </h3>
-              <p className="text-muted-foreground leading-relaxed italic">
-                {teacher.bio || "Aucune biographie renseignée pour ce professeur."}
-              </p>
             </div>
           </div>
 
