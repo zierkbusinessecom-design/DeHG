@@ -107,7 +107,7 @@ export default function TeachersPage() {
                     {teacher.profiles?.first_name?.[0]}{teacher.profiles?.last_name?.[0]}
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-white uppercase tracking-tight">{teacher.profiles?.last_name}</h3>
+                    <h3 className="text-xl font-black text-white uppercase tracking-tight">{teacher.profiles?.first_name} {teacher.profiles?.last_name}</h3>
                     <p className="text-sm text-primary font-bold tracking-widest uppercase opacity-80">{teacher.specialty}</p>
                   </div>
                 </div>
@@ -125,12 +125,7 @@ export default function TeachersPage() {
                     </div>
                     <span className="text-xs font-medium tracking-tight">{teacher.profiles?.phone || 'N/A'}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-muted-foreground group-hover:text-white transition-colors">
-                    <div className="p-2 bg-white/5 rounded-lg border border-white/5">
-                      <BookOpen className="w-4 h-4 text-primary/60" />
-                    </div>
-                    <span className="text-xs font-medium tracking-tight">3 Matières assignées</span>
-                  </div>
+
                 </div>
 
                 <div className="flex gap-3 relative z-10">
@@ -138,13 +133,7 @@ export default function TeachersPage() {
                     onClick={() => router.push(`/teachers/${teacher.id}`)}
                     className="flex-1 bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest py-3.5 rounded-[1.25rem] border border-white/10 transition-all flex items-center justify-center gap-2"
                   >
-                    <ExternalLink className="w-3 h-3" /> Dossier Prof
-                  </button>
-                  <button 
-                    onClick={() => alert("Planning en cours de génération...")}
-                    className="flex-1 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-widest py-3.5 rounded-[1.25rem] border border-primary/20 transition-all shadow-lg hover:shadow-primary/20"
-                  >
-                    Planning
+                    <ExternalLink className="w-3 h-3" /> Voir le Dossier Complet
                   </button>
                 </div>
 

@@ -12,18 +12,18 @@ import {
   Mail, 
   Phone, 
   Briefcase,
-  Calendar,
-  Clock,
-  BookOpen,
+  User, 
+  ChevronLeft, 
+  Edit, 
+  Trash2, 
+  Mail, 
+  Phone, 
   Award,
   CheckCircle2,
   MessageCircle,
-  PlusCircle,
-  X
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
-import { Portal } from '@/components/Portal';
 import { useSchoolId } from '@/hooks/useSchoolId';
 
 export default function TeacherProfilePage() {
@@ -31,17 +31,8 @@ export default function TeacherProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const [teacher, setTeacher] = useState<any>(null);
-  const [assignedCourses, setAssignedCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAssignModal, setShowAssignModal] = useState(false);
   
-  // Données pour le modal
-  const [subjects, setSubjects] = useState<any[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedGroup, setSelectedGroup] = useState('');
-  const [isAssigning, setIsAssigning] = useState(false);
-
   const { schoolId: school_id } = useSchoolId();
   const supabase = createClient();
 
@@ -50,7 +41,7 @@ export default function TeacherProfilePage() {
   }, [id]);
 
   const fetchTeacherData = async () => {
-    // 1. Infos prof
+    // Infos prof
     const { data: teacherData } = await supabase
       .from('teachers')
       .select('*, profiles(*)')
@@ -58,51 +49,7 @@ export default function TeacherProfilePage() {
       .single();
     
     if (teacherData) setTeacher(teacherData);
-
-    // 2. Matières assignées (Cours)
-    const { data: coursesData } = await supabase
-      .from('courses')
-      .select('*, subjects(*), groups(*)')
-      .eq('teacher_id', id);
-    
-    if (coursesData) setAssignedCourses(coursesData);
-
-    // 3. Charger sujets et groupes pour le modal
-    const { data: subs } = await supabase.from('subjects').select('*');
-    const { data: grps } = await supabase.from('groups').select('*');
-    if (subs) setSubjects(subs);
-    if (grps) setGroups(grps);
-
     setLoading(false);
-  };
-
-  const handleAssignSubject = async () => {
-    if (!selectedSubject || !selectedGroup || !school_id) return;
-    setIsAssigning(true);
-
-    try {
-      const { error } = await supabase
-        .from('courses')
-        .insert([{
-          school_id,
-          teacher_id: id,
-          subject_id: selectedSubject,
-          group_id: selectedGroup,
-          academic_year: '2023-2024' // À dynamiser plus tard
-        }]);
-
-      if (error) throw error;
-      
-      setShowAssignModal(false);
-      setSelectedSubject('');
-      setSelectedGroup('');
-      fetchTeacherData();
-    } catch (err) {
-      console.error(err);
-      alert("Erreur lors de l'assignation");
-    } finally {
-      setIsAssigning(false);
-    }
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-96"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div></DashboardLayout>;
@@ -174,173 +121,32 @@ export default function TeacherProfilePage() {
         </div>
 
         {/* Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-8">
-            <div className="glass-card p-10 rounded-[2.5rem] border border-white/10">
-              <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tight flex items-center gap-4">
-                <Award className="w-6 h-6 text-primary" /> Biographie & Expérience
-              </h3>
-              <p className="text-muted-foreground leading-relaxed italic">
-                {teacher.bio || "Aucune biographie renseignée pour ce professeur."}
-              </p>
-            </div>
-
-            <div className="glass-card p-10 rounded-[2.5rem] border border-white/10">
-              <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tight flex items-center gap-4">
-                <Clock className="w-6 h-6 text-primary" /> Matières & Classes assignées
-              </h3>
-              {assignedCourses.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {assignedCourses.map((course) => (
-                    <div key={course.id} className="p-6 bg-white/5 rounded-3xl border border-white/5 group/course relative overflow-hidden">
-                       <div className="absolute top-0 right-0 p-4 opacity-0 group-hover/course:opacity-100 transition-opacity">
-                          <button 
-                            onClick={async () => {
-                              if(confirm("Désassigner cette matière ?")) {
-                                await supabase.from('courses').delete().eq('id', course.id);
-                                fetchTeacherData();
-                              }
-                            }}
-                            className="text-red-400 hover:text-red-300"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                       </div>
-                       <p className="text-xs font-black text-primary uppercase tracking-widest mb-1">{course.subjects?.name}</p>
-                       <p className="text-white font-bold">{course.groups?.name}</p>
-                       <div className="flex items-center gap-2 mt-3 text-[9px] text-muted-foreground font-black uppercase tracking-widest">
-                          <BookOpen className="w-3 h-3" /> {course.subjects?.book_name || 'Support standard'}
-                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="bg-white/5 rounded-3xl p-10 text-center border border-white/5 border-dashed">
-                  <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                  <p className="text-muted-foreground font-bold italic">Aucun cours assigné pour le moment.</p>
-                </div>
-              )}
-            </div>
+        <div className="max-w-4xl mx-auto">
+          <div className="glass-card p-10 rounded-[2.5rem] border border-white/10">
+            <h3 className="text-xl font-black text-white mb-8 uppercase tracking-tight flex items-center gap-4">
+              <Award className="w-6 h-6 text-primary" /> Biographie & Expérience Professionnelle
+            </h3>
+            <p className="text-muted-foreground leading-relaxed italic text-lg">
+              {teacher.bio || "Aucune biographie renseignée pour ce professeur."}
+            </p>
           </div>
-
-          <div className="space-y-8">
-            <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-              <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight">Statistiques</h3>
-              <div className="space-y-6">
-                <div>
-                  <p className="text-4xl font-black text-white tracking-tighter">100%</p>
-                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mt-1">Présence Enseignant</p>
-                </div>
-                <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                   <div className="flex items-center justify-between mb-2">
-                     <span className="text-[10px] font-black text-muted-foreground uppercase">Matières</span>
-                     <span className="text-sm font-black text-white">{assignedCourses.length}</span>
-                   </div>
-                   <div className="flex items-center justify-between">
-                     <span className="text-[10px] font-black text-muted-foreground uppercase">Classes</span>
-                     <span className="text-sm font-black text-white">{new Set(assignedCourses.map(c => c.group_id)).size}</span>
-                   </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-              <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight">Actions Rapides</h3>
-              <div className="space-y-3">
-                <button 
-                  onClick={() => {
-                    // Nettoyage complet : garde uniquement les chiffres
-                    let phone = teacher.profiles?.phone?.replace(/\D/g, '');
-                    
-                    if (!phone) {
-                      alert("Numéro de téléphone non renseigné");
-                      return;
-                    }
-
-                    // Logique Spéciale Belgique (+32)
-                    // Si le numéro commence par 04... ou 4... (et fait environ 9-10 chiffres), c'est un numéro belge
-                    if (phone.startsWith('0')) phone = phone.substring(1);
-                    if (!phone.startsWith('32') && phone.length <= 10) {
-                      phone = '32' + phone;
-                    }
-                    
-                    window.open(`https://wa.me/${phone}`, '_blank');
-                  }}
-                  className="w-full btn-secondary text-[10px] uppercase font-black py-4 flex items-center justify-center gap-3"
-                >
-                  <MessageCircle className="w-4 h-4 text-[#25D366]" /> WhatsApp Belge
-                </button>
-                <button 
-                  onClick={() => setShowAssignModal(true)}
-                  className="w-full btn-secondary text-[10px] uppercase font-black py-4 flex items-center justify-center gap-3"
-                >
-                  <PlusCircle className="w-4 h-4 text-primary" /> Assigner une Matière
-                </button>
-              </div>
-            </div>
+          
+          <div className="mt-8 flex justify-center">
+            <button 
+              onClick={() => {
+                let phone = teacher.profiles?.phone?.replace(/\D/g, '');
+                if (!phone) { alert("Numéro non renseigné"); return; }
+                if (phone.startsWith('0')) phone = phone.substring(1);
+                if (!phone.startsWith('32') && phone.length <= 10) phone = '32' + phone;
+                window.open(`https://wa.me/${phone}`, '_blank');
+              }}
+              className="px-10 py-5 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-[2rem] border border-emerald-500/20 text-xs font-black uppercase tracking-widest transition-all flex items-center gap-3"
+            >
+              <MessageCircle className="w-5 h-5" /> Contacter via WhatsApp
+            </button>
           </div>
         </div>
       </div>
-      {/* MODAL ASSIGNATION */}
-      {showAssignModal && (
-        <Portal>
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md">
-            <div className="glass-card w-full max-w-lg p-12 rounded-[3.5rem] border border-white/10 relative overflow-hidden shadow-2xl">
-               <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary/5 rounded-full blur-[80px]" />
-               
-               <button 
-                onClick={() => setShowAssignModal(false)}
-                className="absolute top-10 right-10 text-white/30 hover:text-white transition-colors"
-               >
-                 <X className="w-6 h-6" />
-               </button>
-
-               <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Assignation</h2>
-               <p className="text-muted-foreground text-sm font-medium mb-10">Liez ce professeur à une matière et un groupe.</p>
-
-               <div className="space-y-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Sélectionner la Matière</label>
-                    <select 
-                      value={selectedSubject}
-                      onChange={(e) => setSelectedSubject(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white focus:ring-2 focus:ring-primary/50 outline-none appearance-none"
-                    >
-                      <option value="" className="bg-[#121214]">Choisir une matière...</option>
-                      {subjects.map(s => (
-                        <option key={s.id} value={s.id} className="bg-[#121214]">{s.name} ({s.book_name || 'Standard'})</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Sélectionner le Groupe (Classe)</label>
-                    <select 
-                      value={selectedGroup}
-                      onChange={(e) => setSelectedGroup(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-white focus:ring-2 focus:ring-primary/50 outline-none appearance-none"
-                    >
-                      <option value="" className="bg-[#121214]">Choisir un groupe...</option>
-                      {groups.map(g => (
-                        <option key={g.id} value={g.id} className="bg-[#121214]">{g.name} - {g.session === 'morning' ? 'Matin' : 'Après-midi'}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="pt-6">
-                    <button 
-                      onClick={handleAssignSubject}
-                      disabled={isAssigning || !selectedSubject || !selectedGroup}
-                      className="w-full btn-primary py-5 rounded-[2rem] text-sm font-black uppercase tracking-widest shadow-[0_20px_40px_-10px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:shadow-none"
-                    >
-                      {isAssigning ? 'Assignation en cours...' : 'Confirmer l\'Assignation'}
-                    </button>
-                  </div>
-               </div>
-            </div>
-          </div>
-        </Portal>
-      )}
     </DashboardLayout>
   );
 }
