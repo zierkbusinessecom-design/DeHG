@@ -17,10 +17,19 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/context/TranslationContext';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase-client';
+import { useRouter } from 'next/navigation';
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { t, locale, setLocale } = useTranslation();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   const menuItems = [
     { icon: LayoutDashboard, label: t.dashboard, href: '/dashboard' },
@@ -88,7 +97,10 @@ const Sidebar = () => {
           ))}
         </div>
 
-        <button className="flex items-center gap-4 w-full px-5 py-4 text-red-400 hover:bg-red-500/10 rounded-2xl transition-all group border border-transparent hover:border-red-500/10">
+        <button 
+          onClick={handleLogout}
+          className="flex items-center gap-4 w-full px-5 py-4 text-red-400 hover:bg-red-500/10 rounded-2xl transition-all group border border-transparent hover:border-red-500/10"
+        >
           <LogOut className="w-5 h-5 transition-transform group-hover:translate-x-1" />
           <span className="font-black text-[13px] uppercase tracking-widest">{t.logout}</span>
         </button>
