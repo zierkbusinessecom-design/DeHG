@@ -15,6 +15,8 @@ import {
 import { createClient } from '@/lib/supabase-client';
 import { useSchoolId } from '@/hooks/useSchoolId';
 
+import { SubjectMultiSelect } from '@/components/SubjectMultiSelect';
+
 export default function EditTeacherPage() {
   const { t } = useTranslation();
   const { id } = useParams();
@@ -30,6 +32,8 @@ export default function EditTeacherPage() {
     specialty: '',
     bio: ''
   });
+
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
   const { schoolId: school_id } = useSchoolId();
   const supabase = createClient();
@@ -54,6 +58,12 @@ export default function EditTeacherPage() {
           specialty: data.specialty || '',
           bio: data.bio || ''
         });
+
+        // Parse specialty into array for MultiSelect
+        if (data.specialty) {
+          const subjects = data.specialty.split(',').map((s: string) => s.trim()).filter((s: string) => s !== '');
+          setSelectedSubjects(subjects);
+        }
       }
       setLoading(false);
     };
@@ -64,9 +74,20 @@ export default function EditTeacherPage() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleSubjectsChange = (values: string[]) => {
+    setSelectedSubjects(values);
+    setFormData(prev => ({ ...prev, specialty: values.join(', ') }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    
+    if (selectedSubjects.length === 0) {
+      alert("Veuillez sélectionner au moins une matière.");
+      setSaving(false);
+      return;
+    }
     
     try {
       // 1. Récupérer l'ID du profil
@@ -168,8 +189,12 @@ export default function EditTeacherPage() {
                   </div>
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"><Briefcase className="w-3.5 h-3.5 text-primary" /> Spécialité / Matière principale</label>
-                  <input required name="specialty" className="input-field" placeholder="Ex: Langue Arabe, Coran, Mathématiques" value={formData.specialty} onChange={handleChange} />
+                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"><Briefcase className="w-3.5 h-3.5 text-primary" /> Spécialité / Matière(s) enseignée(s)</label>
+                  <SubjectMultiSelect 
+                    selectedValues={selectedSubjects} 
+                    onChange={handleSubjectsChange} 
+                    placeholder="Sélectionnez une ou plusieurs matières..."
+                  />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Biographie / Expérience</label>
