@@ -132,7 +132,7 @@ export default function TeachersPage() {
                       <BookOpen className="w-4 h-4 text-primary/60" />
                     </div>
                     <span className="text-xs font-medium tracking-tight">
-                      {teacher.courses?.[0]?.count || 0} Matière(s) assignée(s)
+                      {teacher.specialty ? teacher.specialty.split(',').filter((s: string) => s.trim() !== '').length : 0} Matière(s) spécialisée(s)
                     </span>
                   </div>
                 </div>
