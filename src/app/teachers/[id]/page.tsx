@@ -15,6 +15,11 @@ import {
   Award,
   CheckCircle2,
   MessageCircle,
+  Clock,
+  BookOpen,
+  Calendar,
+  PlusCircle,
+  X
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
