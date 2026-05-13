@@ -108,6 +108,18 @@ export default function TeacherProfilePage() {
                   <Phone className="w-5 h-5 text-primary" />
                   <span className="text-sm font-medium text-white/80">{teacher.profiles?.phone || 'Non renseigné'}</span>
                 </div>
+                <button 
+                  onClick={() => {
+                    let phone = teacher.profiles?.phone?.replace(/\D/g, '');
+                    if (!phone) { alert("Numéro non renseigné"); return; }
+                    if (phone.startsWith('0')) phone = phone.substring(1);
+                    if (!phone.startsWith('32') && phone.length <= 10) phone = '32' + phone;
+                    window.open(`https://wa.me/${phone}`, '_blank');
+                  }}
+                  className="px-6 py-2 bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white rounded-xl border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg ml-4"
+                >
+                  <MessageCircle className="w-4 h-4" /> WhatsApp
+                </button>
               </div>
             </div>
           </div>
@@ -152,25 +164,6 @@ export default function TeacherProfilePage() {
               </div>
             </div>
           </div>
-
-          <div className="space-y-8">
-            <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-              <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight">Actions Rapides</h3>
-              <div className="space-y-3">
-                <button 
-                  onClick={() => {
-                    let phone = teacher.profiles?.phone?.replace(/\D/g, '');
-                    if (!phone) { alert("Numéro non renseigné"); return; }
-                    if (phone.startsWith('0')) phone = phone.substring(1);
-                    if (!phone.startsWith('32') && phone.length <= 10) phone = '32' + phone;
-                    window.open(`https://wa.me/${phone}`, '_blank');
-                  }}
-                  className="w-full btn-secondary text-[10px] uppercase font-black py-4 flex items-center justify-center gap-3"
-                >
-                  <MessageCircle className="w-4 h-4 text-[#25D366]" /> WhatsApp Belge
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
