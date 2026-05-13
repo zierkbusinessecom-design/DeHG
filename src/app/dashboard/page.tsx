@@ -91,8 +91,8 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 glass-card p-8 rounded-3xl border border-white/5 overflow-hidden relative">
+        <div className="grid grid-cols-1 gap-8">
+          <div className="glass-card p-8 rounded-3xl border border-white/5 overflow-hidden relative">
             <div className="absolute right-0 top-0 p-8 opacity-5">
               <Activity className="w-32 h-32 text-primary" />
             </div>
@@ -115,26 +115,6 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Jour {i+1}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="glass-card p-8 rounded-3xl border border-white/5 relative overflow-hidden">
-            <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
-              <Clock className="w-5 h-5 text-primary" />
-              {t.recent_activity}
-            </h2>
-            <div className="space-y-8 relative">
-              <div className="absolute left-2.5 top-2 bottom-2 w-px bg-gradient-to-b from-primary/50 via-primary/10 to-transparent" />
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex gap-5 relative group">
-                  <div className="w-5 h-5 rounded-full bg-card border-2 border-primary mt-1 z-10 transition-all duration-300 group-hover:scale-125 group-hover:shadow-[0_0_15px_rgba(34,197,94,1)]" />
-                  <div>
-                    <p className="text-[13px] text-white font-bold tracking-tight">{activity.user}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{activity.action}</p>
-                    <p className="text-[9px] text-primary font-black mt-2 uppercase tracking-widest opacity-60 group-hover:opacity-100 transition-all">{activity.time}</p>
-                  </div>
                 </div>
               ))}
             </div>
