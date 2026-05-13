@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
+import { Portal } from '@/components/Portal';
 import { useSchoolId } from '@/hooks/useSchoolId';
 
 export default function TeacherProfilePage() {
@@ -30,7 +31,16 @@ export default function TeacherProfilePage() {
   const { id } = useParams();
   const router = useRouter();
   const [teacher, setTeacher] = useState<any>(null);
+  const [assignedCourses, setAssignedCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  
+  // Données pour le modal
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState('');
+  const [isAssigning, setIsAssigning] = useState(false);
 
   const { schoolId: school_id } = useSchoolId();
   const supabase = createClient();
@@ -40,15 +50,59 @@ export default function TeacherProfilePage() {
   }, [id]);
 
   const fetchTeacherData = async () => {
-    // Infos prof
+    // 1. Infos prof
     const { data: teacherData } = await supabase
       .from('teachers')
       .select('*, profiles(*)')
       .eq('id', id)
       .single();
-
+    
     if (teacherData) setTeacher(teacherData);
+
+    // 2. Matières assignées (Cours)
+    const { data: coursesData } = await supabase
+      .from('courses')
+      .select('*, subjects(*), groups(*)')
+      .eq('teacher_id', id);
+    
+    if (coursesData) setAssignedCourses(coursesData);
+
+    // 3. Charger sujets et groupes pour le modal
+    const { data: subs } = await supabase.from('subjects').select('*');
+    const { data: grps } = await supabase.from('groups').select('*');
+    if (subs) setSubjects(subs);
+    if (grps) setGroups(grps);
+
     setLoading(false);
+  };
+
+  const handleAssignSubject = async () => {
+    if (!selectedSubject || !selectedGroup || !school_id) return;
+    setIsAssigning(true);
+
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .insert([{
+          school_id,
+          teacher_id: id,
+          subject_id: selectedSubject,
+          group_id: selectedGroup,
+          academic_year: '2023-2024'
+        }]);
+
+      if (error) throw error;
+      
+      setShowAssignModal(false);
+      setSelectedSubject('');
+      setSelectedGroup('');
+      fetchTeacherData();
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de l'assignation");
+    } finally {
+      setIsAssigning(false);
+    }
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-96"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div></DashboardLayout>;
