@@ -36,9 +36,11 @@ export default function TeachersPage() {
 
   const fetchTeachers = async () => {
     setLoading(true);
+    // On récupère les profs, leurs profils et on compte les entrées dans la table 'courses'
     const { data } = await supabase
       .from('teachers')
-      .select('*, profiles(*)');
+      .select('*, profiles(*), courses(count)');
+    
     if (data) setTeachers(data);
     setLoading(false);
   };
@@ -125,7 +127,15 @@ export default function TeachersPage() {
                     </div>
                     <span className="text-xs font-medium tracking-tight">{teacher.profiles?.phone || 'N/A'}</span>
                   </div>
-
+                  
+                  <div className="flex items-center gap-4 text-muted-foreground group-hover:text-white transition-colors">
+                    <div className="p-2 bg-white/5 rounded-lg border border-white/5">
+                      <BookOpen className="w-4 h-4 text-primary/60" />
+                    </div>
+                    <span className="text-xs font-medium tracking-tight">
+                      {teacher.courses?.[0]?.count || 0} Matière(s) assignée(s)
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 relative z-10">
