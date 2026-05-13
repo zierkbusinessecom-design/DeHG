@@ -32,15 +32,15 @@ export function StudentQRCode({ studentId, studentName, onClose }: StudentQRCode
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="glass-card w-full max-w-sm p-10 rounded-[3rem] border border-white/10 relative overflow-hidden text-center">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="glass-card w-full max-w-sm p-10 rounded-[3rem] border border-white/10 relative text-center" onClick={e => e.stopPropagation()}>
         {/* Background Decoration */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <button 
           onClick={onClose}
-          className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-all"
+          className="absolute top-6 right-6 z-20 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white transition-all"
         >
           <X className="w-5 h-5" />
         </button>
