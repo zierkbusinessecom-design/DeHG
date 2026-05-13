@@ -549,11 +549,11 @@ export default function StudentProfilePage() {
       </div>
 
       {showQR && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setShowQR(false)}>
-           <div className="bg-white p-12 rounded-[3rem] relative" onClick={e => e.stopPropagation()}>
-              <StudentQRCode studentId={student.id} />
-           </div>
-        </div>
+        <StudentQRCode 
+          studentId={student.id} 
+          studentName={`${student.first_name} ${student.last_name}`}
+          onClose={() => setShowQR(false)} 
+        />
       )}
 
       {showUpdateProgress && (
