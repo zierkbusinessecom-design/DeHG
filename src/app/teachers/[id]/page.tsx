@@ -326,3 +326,6 @@ export default function TeacherProfilePage() {
           </div>
         </Portal>
       )}
+    </DashboardLayout>
+  );
+}
