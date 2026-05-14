@@ -109,7 +109,6 @@ export default function TeachersPage() {
                   </div>
                   <div>
                     <h3 className="text-xl font-black text-white uppercase tracking-tight">{teacher.profiles?.first_name} {teacher.profiles?.last_name}</h3>
-                    <p className="text-sm text-primary font-bold tracking-widest uppercase opacity-80">{teacher.specialty}</p>
                   </div>
                 </div>
 

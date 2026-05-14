@@ -278,6 +278,32 @@ export default function StudentProfilePage() {
           )}>
             {activeTab === 'overview' && (
               <>
+                {/* NOTIFICATIONS / ÉVALUATIONS À VENIR */}
+                {evaluations.some(e => e.grade === null) && (
+                  <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-[2rem] relative overflow-hidden animate-pulse">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                      <Clock className="w-12 h-12 text-amber-500" />
+                    </div>
+                    <h3 className="text-sm font-black text-amber-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Clock className="w-4 h-4" /> Évaluation à Venir
+                    </h3>
+                    <div className="space-y-3">
+                      {evaluations.filter(e => e.grade === null).map((e, i) => (
+                        <div key={i} className="flex justify-between items-center bg-black/20 p-4 rounded-2xl border border-white/5">
+                          <div>
+                            <p className="text-white font-black uppercase text-xs">{e.type} : {e.subject}</p>
+                            <p className="text-[10px] text-muted-foreground font-bold mt-1">Prévu le : {new Date(e.evaluation_date).toLocaleDateString()}</p>
+                          </div>
+                          <div className="text-right">
+                             <p className="text-[9px] text-amber-400 font-black uppercase">À étudier</p>
+                             {e.remarks && <p className="text-[8px] text-white/50 italic mt-1 max-w-[150px] truncate">{e.remarks}</p>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* STATISTIQUES RAPIDES */}
                 <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
                    <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
@@ -424,6 +450,20 @@ export default function StudentProfilePage() {
                               <p className="text-xs text-white/70 italic">"{book.remarks || 'Aucune remarque'}"</p>
                            </div>
                         </div>
+                      )) : student.alphabet_book ? student.alphabet_book.split(', ').map((bookName: string, idx: number) => (
+                        <div key={idx} className="p-6 bg-white/5 rounded-3xl border border-white/5 space-y-4">
+                           <div className="flex justify-between items-start">
+                              <div>
+                                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Inscrit</p>
+                                <h4 className="text-lg font-black text-white uppercase">{bookName}</h4>
+                              </div>
+                              <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg uppercase">En cours</span>
+                           </div>
+                           <div className="space-y-2">
+                              <p className="text-[10px] text-muted-foreground font-black uppercase">Statut</p>
+                              <p className="text-xs text-white/70 italic">Suivi pédagogique actif.</p>
+                           </div>
+                        </div>
                       )) : (
                         <div className="col-span-2 py-10 text-center text-muted-foreground italic border-2 border-dashed border-white/5 rounded-3xl">
                           Aucun livre spécifique enregistré pour le moment.
@@ -448,6 +488,7 @@ export default function StudentProfilePage() {
                              <th className="px-6 py-5">Type</th>
                              <th className="px-6 py-5">Matière</th>
                              <th className="px-6 py-5">Note</th>
+                             <th className="px-6 py-5">Remarque Professeur</th>
                           </tr>
                        </thead>
                        <tbody className="text-white/80">
@@ -456,12 +497,82 @@ export default function StudentProfilePage() {
                                 <td className="px-6 py-5 font-black">{new Date(e.evaluation_date).toLocaleDateString()}</td>
                                 <td className="px-6 py-5"><span className="px-2 py-1 bg-white/5 rounded border border-white/10 uppercase text-[9px]">{e.type}</span></td>
                                 <td className="px-6 py-5 uppercase font-black">{e.subject}</td>
-                                <td className="px-6 py-5 font-black text-primary text-lg">{e.grade}/10</td>
+                                <td className="px-6 py-5 font-black text-primary text-lg">
+                                  {e.grade !== null ? `${e.grade}/10` : <span className="text-amber-500 text-xs">En attente</span>}
+                                </td>
+                                <td className="px-6 py-5 italic text-white/60">{e.remarks || '-'}</td>
                              </tr>
                           ))}
                        </tbody>
                     </table>
                  </div>
+              </div>
+            )}
+
+            {activeTab === 'discipline' && (
+              <div className="space-y-6">
+                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                   <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
+                     <ShieldAlert className="w-6 h-6 text-red-500" /> Sanctions & Rapports de Comportement
+                   </h3>
+                   <div className="space-y-4">
+                      {disciplineRecords.length > 0 ? disciplineRecords.map((rec, i) => (
+                        <div key={i} className="p-6 bg-red-500/5 rounded-3xl border border-red-500/10 flex justify-between items-center">
+                           <div>
+                              <p className="text-[10px] text-red-400 font-black uppercase tracking-widest">{new Date(rec.date).toLocaleDateString()}</p>
+                              <h4 className="text-sm font-black text-white uppercase mt-1">{rec.description}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">{rec.type}</p>
+                           </div>
+                           <div className="px-4 py-2 bg-red-500/10 rounded-xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase">
+                              Sanction
+                           </div>
+                        </div>
+                      )) : (
+                        <div className="py-20 text-center glass-card border-dashed">
+                           <ShieldCheck className="w-12 h-12 text-emerald-500 mx-auto mb-4 opacity-20" />
+                           <p className="text-muted-foreground font-bold italic">Aucun incident disciplinaire signalé.</p>
+                        </div>
+                      )}
+                   </div>
+                </div>
+
+                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                   <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
+                     <Clock className="w-6 h-6 text-amber-500" /> Prochaines Évaluations
+                   </h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {evaluations.filter(e => e.grade === null).map((e, i) => (
+                         <div key={i} className="p-6 bg-amber-500/5 rounded-3xl border border-amber-500/10 flex flex-col justify-between">
+                            <div className="flex justify-between items-start mb-3">
+                               <span className="text-xs font-black text-amber-500 uppercase tracking-wide">{e.subject}</span>
+                               <span className="text-[9px] text-amber-500/60 font-bold">{new Date(e.evaluation_date).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-[11px] text-white/80 font-medium">Type: {e.type}</p>
+                            {e.remarks && <p className="text-[10px] text-white/50 italic mt-2 border-t border-white/5 pt-2">"{e.remarks}"</p>}
+                         </div>
+                      ))}
+                      {evaluations.filter(e => e.grade === null).length === 0 && (
+                        <p className="col-span-2 text-center text-muted-foreground italic py-10">Aucune évaluation programmée.</p>
+                      )}
+                   </div>
+                </div>
+
+                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                   <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
+                     <MessageSquare className="w-6 h-6 text-primary" /> Remarques des Évaluations passées
+                   </h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {evaluations.filter(e => e.remarks && e.grade !== null).map((e, i) => (
+                        <div key={i} className="p-6 bg-white/5 rounded-3xl border border-white/5">
+                           <div className="flex justify-between items-start mb-3">
+                              <span className="text-xs font-black text-primary uppercase tracking-wide">{e.subject}</span>
+                              <span className="text-[9px] text-muted-foreground">{new Date(e.evaluation_date).toLocaleDateString()}</span>
+                           </div>
+                           <p className="text-xs text-white/80 italic">"{e.remarks}"</p>
+                        </div>
+                      ))}
+                   </div>
+                </div>
               </div>
             )}
 

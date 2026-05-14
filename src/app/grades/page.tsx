@@ -13,7 +13,9 @@ import {
   Save,
   CheckCircle2,
   Trash2,
-  BookOpen
+  BookOpen,
+  Clock,
+  AlertCircle
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { ProSelect } from '@/components/ui/ProSelect';
@@ -36,7 +38,9 @@ export default function GradesPage() {
     student_id: '',
     date: new Date(),
     isGroup: true,
+    target: 'group-all', // group-all, group-a, group-b, individual
     group_id: 'morning',
+    globalRemarks: '',
     selectedSubjects: [
       { id: Date.now(), subject: '', scope: { start_juz: '30', start_surah: 'An-Naba', start_page: '', end_juz: '30', end_surah: 'An-Nas', end_page: '' } }
     ]
@@ -55,6 +59,9 @@ export default function GradesPage() {
         .from('academic_evaluations')
         .select('*, students(first_name, last_name)')
         .order('evaluation_date', { ascending: false });
+      
+      if (evalData) setEvaluations(evalData);
+
       // 3. Charger les matières
       const { data: subjectsData } = await supabase.from('subjects').select('*').order('name');
       if (subjectsData) setSubjects(subjectsData);
@@ -73,8 +80,13 @@ export default function GradesPage() {
       const school_id = schoolData?.id || 'd8c1c1c1-c1c1-c1c1-c1c1-d8c1c1c1c1c1';
 
       let studentIds: string[] = [];
-      if (newEval.isGroup) {
-        const { data } = await supabase.from('students').select('id').eq('status', 'active');
+      if (newEval.target !== 'individual') {
+        let query = supabase.from('students').select('id').eq('status', 'active');
+        
+        if (newEval.target === 'group-a') query = query.eq('group_id', 'morning');
+        if (newEval.target === 'group-b') query = query.eq('group_id', 'afternoon');
+        
+        const { data } = await query;
         if (data) studentIds = data.map(s => s.id);
       } else {
         if (!newEval.student_id) return alert("Choisissez un élève");
@@ -92,9 +104,9 @@ export default function GradesPage() {
           subject: sub.subject,
           type: newEval.type.charAt(0).toUpperCase() + newEval.type.slice(1),
           evaluation_date: newEval.date.toISOString().split('T')[0],
-          grade: 0,
+          grade: null,
           scope: sub.scope,
-          remarks: 'Planification'
+          remarks: newEval.globalRemarks || 'Planification'
         }))
       );
 
@@ -192,14 +204,25 @@ export default function GradesPage() {
                                  <td className="py-6 text-sm text-white font-black uppercase tracking-tight">{item.subject}</td>
                                  <td className="py-6 text-xs text-muted-foreground font-medium">{new Date(item.evaluation_date).toLocaleDateString()}</td>
                                  <td className="py-6 text-center">
-                                    <span className={cn(
-                                       "text-lg font-black",
-                                       Number(item.grade) >= 8 ? "text-emerald-400" :
-                                       Number(item.grade) >= 5 ? "text-amber-400" : "text-red-400"
-                                    )}>
-                                       {item.grade}
-                                    </span>
-                                    <span className="text-[10px] text-muted-foreground">/10</span>
+                                    {item.grade !== null && item.grade !== undefined ? (
+                                       <>
+                                          <span className={cn(
+                                             "text-lg font-black",
+                                             Number(item.grade) >= 8 ? "text-emerald-400" :
+                                             Number(item.grade) >= 5 ? "text-amber-400" : "text-red-400"
+                                          )}>
+                                             {item.grade}
+                                          </span>
+                                          <span className="text-[10px] text-muted-foreground">/10</span>
+                                       </>
+                                    ) : (
+                                       <div className="flex flex-col items-center gap-1">
+                                          <div className="p-1.5 bg-white/5 rounded-lg border border-white/10">
+                                             <Clock className="w-4 h-4 text-amber-500 animate-pulse" />
+                                          </div>
+                                          <span className="text-[8px] font-black text-amber-500/80 uppercase tracking-widest">En attente</span>
+                                       </div>
+                                    )}
                                  </td>
                                  <td className="py-6 text-right">
                                     <button className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Modifier</button>
@@ -250,15 +273,35 @@ export default function GradesPage() {
                    onChange={(val) => setNewEval(p => ({...p, type: val}))}
                    options={[{value: 'test', label: t.test}, {value: 'evaluation', label: t.evaluation}, {value: 'exam', label: t.exam}]}
                 />
-                 <ProSelect 
+                <ProSelect 
                     label="Public visé"
-                    value={newEval.isGroup ? 'group' : 'individual'}
-                    onChange={(val) => setNewEval(p => ({...p, isGroup: val === 'group'}))}
-                    options={[{value: 'group', label: 'Groupe Entier'}, {value: 'individual', label: 'Élève Unique'}]}
-                 />
+                    value={newEval.target}
+                    onChange={(val) => setNewEval(p => ({...p, target: val, isGroup: val !== 'individual'}))}
+                    options={[
+                      {value: 'group-all', label: 'Groupe Entier'}, 
+                      {value: 'group-a', label: 'Groupe A (Matin)'}, 
+                      {value: 'group-b', label: 'Groupe B (Après-midi)'}, 
+                      {value: 'individual', label: 'Élève Unique'}
+                    ]}
+                  />
+                  <ProDatePicker 
+                    label="Date de l'épreuve"
+                    selected={newEval.date}
+                    onChange={(d) => setNewEval(p => ({...p, date: d || new Date()}))}
+                  />
              </div>
 
-             {!newEval.isGroup && (
+             <div className="mb-8 space-y-1.5">
+                <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Remarque Générale / Message aux Parents</label>
+                <input 
+                  className="input-field" 
+                  placeholder="Ex: Évaluation de fin de mois. À réviser sérieusement." 
+                  value={newEval.globalRemarks}
+                  onChange={(e) => setNewEval(p => ({...p, globalRemarks: e.target.value}))}
+                />
+             </div>
+
+             {newEval.target === 'individual' && (
                 <div className="mb-8 p-6 bg-white/5 rounded-[2rem] border border-white/10 space-y-4">
                    <div className="flex gap-4">
                       <div className="relative flex-1">

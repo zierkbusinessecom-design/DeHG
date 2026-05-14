@@ -91,9 +91,7 @@ export default function TeacherProfilePage() {
             </div>
 
             <div className="text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-4 mb-2">
-                <span className="px-4 py-1 bg-white/5 text-white/40 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-white/5">{teacher.status}</span>
-              </div>
+
               <h1 className="text-5xl font-black text-white tracking-tighter uppercase mb-2 flex items-center justify-center md:justify-start gap-4">
                 {teacher.profiles?.first_name} {teacher.profiles?.last_name}
                 <CheckCircle2 className="w-8 h-8 text-primary fill-primary/10" />

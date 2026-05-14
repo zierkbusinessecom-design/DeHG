@@ -10,10 +10,17 @@ import {
   BadgeDollarSign,
   ArrowUpRight,
   ArrowDownRight,
-  Clock,
-  LayoutGrid,
-  Activity
+  Activity,
+  ShieldAlert,
+  Search,
+  Save,
+  CheckCircle2,
+  X,
+  LayoutGrid
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase-client';
+import { ProSelect } from '@/components/ui/ProSelect';
+import { ProDatePicker } from '@/components/ui/ProDatePicker';
 import { cn } from '@/lib/utils';
 
 const StatCard = ({ title, value, trend, icon: Icon, color }: any) => (
@@ -40,6 +47,68 @@ const StatCard = ({ title, value, trend, icon: Icon, color }: any) => (
 export default function Dashboard() {
   const { t } = useTranslation();
   const [selectedGroup, setSelectedGroup] = useState('all');
+  const [showDisciplineModal, setShowDisciplineModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [disciplineData, setDisciplineData] = useState({
+    student_id: '',
+    group_id: 'all',
+    date: new Date(),
+    description: '',
+    type: ''
+  });
+
+  const supabase = createClient();
+
+  const fetchStudents = async () => {
+    let query = supabase.from('students').select('id, first_name, last_name, group_id').eq('status', 'active');
+    if (disciplineData.group_id !== 'all') {
+      query = query.eq('group_id', disciplineData.group_id === 'A' ? 'morning' : 'afternoon');
+    }
+    const { data } = await query;
+    if (data) setStudents(data);
+  };
+
+  React.useEffect(() => {
+    if (showDisciplineModal) fetchStudents();
+  }, [showDisciplineModal, disciplineData.group_id]);
+
+  const handleCreateReport = async () => {
+    if (!disciplineData.student_id) return alert("Sélectionnez un élève");
+    if (!disciplineData.description) return alert("Indiquez le motif");
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('disciplinary_records').insert({
+        student_id: disciplineData.student_id,
+        date: disciplineData.date.toISOString().split('T')[0],
+        description: disciplineData.description,
+        type: disciplineData.type
+      });
+
+      if (error) throw error;
+      
+      setShowDisciplineModal(false);
+      setDisciplineData({
+        student_id: '',
+        group_id: 'all',
+        date: new Date(),
+        description: '',
+        type: ''
+      });
+      alert("Rapport enregistré avec succès");
+    } catch (err: any) {
+      alert("Erreur : " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredStudents = students.filter(s => 
+    `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const stats = [
     { title: t.total_students, value: '1,284', trend: 12.5, icon: Users, color: 'bg-emerald-500' },
@@ -67,21 +136,30 @@ export default function Dashboard() {
             </div>
           </div>
           
-          <div className="flex gap-1.5 p-1.5 bg-card border border-white/5 rounded-2xl shadow-2xl">
-            {['all', 'A', 'B'].map((group) => (
-              <button
-                key={group}
-                onClick={() => setSelectedGroup(group)}
-                className={cn(
-                  "px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all tracking-tighter",
-                  selectedGroup === group 
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
-                    : "text-muted-foreground hover:text-white hover:bg-white/5"
-                )}
-              >
-                {group === 'all' ? 'Vue Globale' : `Groupe ${group}`}
-              </button>
-            ))}
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setShowDisciplineModal(true)}
+              className="btn-secondary px-6 border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Rapport Discipline
+            </button>
+            <div className="flex gap-1.5 p-1.5 bg-card border border-white/5 rounded-2xl shadow-2xl">
+              {['all', 'A', 'B'].map((group) => (
+                <button
+                  key={group}
+                  onClick={() => setSelectedGroup(group)}
+                  className={cn(
+                    "px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all tracking-tighter",
+                    selectedGroup === group 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                      : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {group === 'all' ? 'Vue Globale' : `Groupe ${group}`}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -100,26 +178,117 @@ export default function Dashboard() {
               <LayoutGrid className="w-5 h-5 text-primary" />
               Statistiques de Présences
             </h2>
-            <div className="h-72 flex items-end justify-between gap-6 px-2">
-              {[65, 45, 75, 85, 55, 95, 80].map((val, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                  <div className="relative w-full">
-                    <div 
-                      className="w-full bg-primary/10 rounded-2xl border border-primary/20 relative group-hover:bg-primary/20 transition-all duration-500 overflow-hidden" 
-                      style={{ height: `${val * 2}px` }}
-                    >
-                      <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-primary to-emerald-400 opacity-60 rounded-2xl group-hover:opacity-100 transition-all duration-500" style={{ height: '100%' }} />
-                    </div>
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all">
-                      {val}%
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Jour {i+1}</span>
-                </div>
-              ))}
+            <div className="h-96 flex items-end justify-between gap-8 px-2">
+               {[65, 45, 75, 85, 55, 95, 80, 70, 90, 60].map((val, i) => (
+                 <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
+                   <div className="relative w-full">
+                     <div 
+                       className="w-full bg-primary/10 rounded-2xl border border-primary/20 relative group-hover:bg-primary/20 transition-all duration-500 overflow-hidden" 
+                       style={{ height: `${val * 3}px` }}
+                     >
+                       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-primary to-emerald-400 opacity-60 rounded-2xl group-hover:opacity-100 transition-all duration-500" style={{ height: '100%' }} />
+                     </div>
+                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all">
+                       {val}%
+                     </div>
+                   </div>
+                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Jour {i+1}</span>
+                 </div>
+               ))}
             </div>
           </div>
         </div>
+
+        {showDisciplineModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <div className="glass-card w-full max-w-2xl p-10 rounded-[3rem] border border-white/10 relative overflow-hidden">
+               <div className="absolute -right-20 -top-20 w-64 h-64 bg-red-500/5 rounded-full blur-3xl" />
+               
+               <button onClick={() => setShowDisciplineModal(false)} className="absolute top-8 right-8 p-2 hover:bg-white/5 rounded-xl transition-all">
+                 <X className="w-6 h-6 text-muted-foreground" />
+               </button>
+
+               <h2 className="text-3xl font-black text-white mb-8 flex items-center gap-4 uppercase tracking-tighter">
+                 <ShieldAlert className="w-8 h-8 text-red-500" /> Rapport Disciplinaire
+               </h2>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <ProDatePicker 
+                    label="Date de l'incident" 
+                    selected={disciplineData.date} 
+                    onChange={d => setDisciplineData(p => ({...p, date: d || new Date()}))} 
+                  />
+                  <ProSelect 
+                    label="Groupe"
+                    value={disciplineData.group_id}
+                    onChange={v => setDisciplineData(p => ({...p, group_id: v, student_id: ''}))}
+                    options={[{value: 'all', label: 'Tous les groupes'}, {value: 'A', label: 'Groupe A (Matin)'}, {value: 'B', label: 'Groupe B (Après-midi)'}]}
+                  />
+                  
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Rechercher l'élève</label>
+                    <div className="relative">
+                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                       <input 
+                         className="input-field pl-12" 
+                         placeholder="Nom ou prénom..." 
+                         value={searchQuery}
+                         onChange={e => setSearchQuery(e.target.value)}
+                       />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                       {filteredStudents.map(student => (
+                         <button
+                           key={student.id}
+                           type="button"
+                           onClick={() => setDisciplineData(p => ({...p, student_id: student.id}))}
+                           className={cn(
+                             "p-3 rounded-xl border text-[10px] font-black uppercase text-center transition-all",
+                             disciplineData.student_id === student.id 
+                               ? "bg-red-500 border-red-500 text-white shadow-lg shadow-red-500/20" 
+                               : "bg-white/5 border-white/10 text-muted-foreground hover:border-white/20"
+                           )}
+                         >
+                           {student.first_name} {student.last_name}
+                         </button>
+                       ))}
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Motif de l'incident</label>
+                    <textarea 
+                      className="input-field min-h-[80px]" 
+                      placeholder="Ex: Comportement perturbateur en classe..."
+                      value={disciplineData.description}
+                      onChange={e => setDisciplineData(p => ({...p, description: e.target.value}))}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Mesure prise (Optionnel)</label>
+                    <input 
+                      className="input-field" 
+                      placeholder="Ex: Avertissement verbal, convocation des parents..."
+                      value={disciplineData.type}
+                      onChange={e => setDisciplineData(p => ({...p, type: e.target.value}))}
+                    />
+                  </div>
+               </div>
+
+               <div className="flex justify-end gap-4">
+                  <button onClick={() => setShowDisciplineModal(false)} className="btn-secondary px-8">Annuler</button>
+                  <button onClick={handleCreateReport} disabled={loading} className="btn-primary bg-red-600 hover:bg-red-500 px-12">
+                    <Save className="w-4 h-4" />
+                    {loading ? 'Enregistrement...' : 'Enregistrer le rapport'}
+                  </button>
+               </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

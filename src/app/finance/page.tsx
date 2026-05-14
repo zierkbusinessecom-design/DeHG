@@ -15,32 +15,127 @@ import {
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
+import { ProSelect } from '@/components/ui/ProSelect';
+import { useSchoolId } from '@/hooks/useSchoolId';
+import { CheckCircle2, X, Save } from 'lucide-react';
 
 export default function FinancePage() {
   const { t } = useTranslation();
   const [payments, setPayments] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [newPayment, setNewPayment] = useState({
+    student_id: '',
+    amount: '',
+    method: 'cash',
+    notes: ''
+  });
 
+  const { schoolId: school_id } = useSchoolId();
   const supabase = createClient();
 
   useEffect(() => {
-    const fetchPayments = async () => {
-      const { data } = await supabase
-        .from('payments')
-        .select(`
-          *,
-          student_fees (
-            students (first_name, last_name)
-          ),
-          profiles (first_name, last_name)
-        `)
-        .order('payment_date', { ascending: false });
-      if (data) setPayments(data);
-      setLoading(false);
-    };
-    fetchPayments();
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    // 1. Fetch Payments
+    const { data: payData } = await supabase
+      .from('payments')
+      .select(`
+        *,
+        student_fees (
+          students (first_name, last_name)
+        ),
+        profiles (first_name, last_name)
+      `)
+      .order('payment_date', { ascending: false });
+    if (payData) setPayments(payData);
+
+    // 2. Fetch Students for the selection
+    const { data: stuData } = await supabase
+      .from('students')
+      .select('id, first_name, last_name')
+      .eq('status', 'active');
+    if (stuData) setStudents(stuData);
+
+    setLoading(false);
+  };
+
+  const handleCreatePayment = async () => {
+    if (!newPayment.student_id || !newPayment.amount) return alert("Veuillez remplir tous les champs");
+    setSaving(true);
+
+    try {
+      // 1. Trouver ou créer un student_fee pour cet élève
+      const { data: feeData } = await supabase
+        .from('student_fees')
+        .select('id')
+        .eq('student_id', newPayment.student_id)
+        .limit(1)
+        .maybeSingle();
+      
+      let feeId = feeData?.id;
+
+      if (!feeId) {
+        const { data: newFee } = await supabase
+          .from('student_fees')
+          .insert([{ student_id: newPayment.student_id, school_id, amount_paid: 0, status: 'partial' }])
+          .select()
+          .single();
+        feeId = newFee?.id;
+      }
+
+      // 2. Insérer le paiement
+      const { error } = await supabase
+        .from('payments')
+        .insert([{
+          student_fee_id: feeId,
+          school_id,
+          amount: Number(newPayment.amount),
+          method: newPayment.method,
+          notes: newPayment.notes,
+          payment_date: new Date().toISOString()
+        }]);
+
+      if (error) throw error;
+
+      alert("Paiement enregistré !");
+      setShowAdd(false);
+      fetchData();
+    } catch (err: any) {
+      alert("Erreur: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const downloadCSV = () => {
+    const headers = ['Date', 'Eleve', 'Montant', 'Methode', 'Gestionnaire'];
+    const rows = filteredPayments.map(p => [
+      new Date(p.payment_date).toLocaleDateString(),
+      `${p.student_fees?.students?.last_name} ${p.student_fees?.students?.first_name}`,
+      p.amount + " €",
+      p.method,
+      `${p.profiles?.first_name} ${p.profiles?.last_name}`
+    ]);
+    
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n"
+      + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "transactions.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const stats = [
     { title: 'Total Collecté (Mois)', value: '4,850 €', icon: ArrowDownCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
@@ -61,7 +156,10 @@ export default function FinancePage() {
             <p className="text-muted-foreground text-sm font-medium mt-1">Suivi des flux financiers et cotisations</p>
           </div>
 
-          <button className="flex items-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3.5 rounded-2xl font-black text-sm transition-all shadow-[0_0_30px_-5px_rgba(34,197,94,0.5)] uppercase tracking-tighter">
+          <button 
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3.5 rounded-2xl font-black text-sm transition-all shadow-[0_0_30px_-5px_rgba(34,197,94,0.5)] uppercase tracking-tighter"
+          >
             <Plus className="w-5 h-5" />
             {t.add_payment}
           </button>
@@ -102,7 +200,10 @@ export default function FinancePage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <button className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white border border-white/10 rounded-2xl transition-all">
+              <button 
+                onClick={downloadCSV}
+                className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white border border-white/10 rounded-2xl transition-all"
+              >
                 <Download className="w-5 h-5" />
               </button>
             </div>
@@ -158,6 +259,71 @@ export default function FinancePage() {
           </div>
         </div>
       </div>
+
+      {showAdd && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+          <div className="glass-card w-full max-w-lg p-10 rounded-[3rem] border border-white/10 relative my-auto">
+             <div className="absolute -right-4 -top-4 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
+             <h2 className="text-2xl font-black text-white mb-10 uppercase tracking-tight flex items-center gap-4">
+                <BadgeDollarSign className="w-8 h-8 text-primary" /> Enregistrer un Paiement
+             </h2>
+             
+             <div className="space-y-6">
+                <div className="space-y-1.5">
+                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Élève</label>
+                   <select 
+                     className="input-field py-3 bg-[#121216]"
+                     value={newPayment.student_id}
+                     onChange={(e) => setNewPayment(p => ({...p, student_id: e.target.value}))}
+                   >
+                     <option value="">Sélectionner un élève...</option>
+                     {students.map(s => <option key={s.id} value={s.id}>{s.last_name} {s.first_name}</option>)}
+                   </select>
+                </div>
+
+                <div className="space-y-1.5">
+                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Montant (€)</label>
+                   <input 
+                     type="number" 
+                     className="input-field" 
+                     placeholder="0.00" 
+                     value={newPayment.amount}
+                     onChange={(e) => setNewPayment(p => ({...p, amount: e.target.value}))}
+                   />
+                </div>
+
+                <ProSelect 
+                   label="Méthode de paiement"
+                   value={newPayment.method}
+                   onChange={(val) => setNewPayment(p => ({...p, method: val}))}
+                   options={[{value: 'cash', label: 'Espèces'}, {value: 'transfer', label: 'Virement'}, {value: 'card', label: 'Carte'}]}
+                />
+
+                <div className="space-y-1.5">
+                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Notes / Référence</label>
+                   <input 
+                     className="input-field" 
+                     placeholder="Ex: Paiement Mars 2024" 
+                     value={newPayment.notes}
+                     onChange={(e) => setNewPayment(p => ({...p, notes: e.target.value}))}
+                   />
+                </div>
+             </div>
+
+             <div className="flex justify-end gap-6 mt-10">
+                <button onClick={() => setShowAdd(false)} className="btn-secondary px-8">Annuler</button>
+                <button 
+                  onClick={handleCreatePayment} 
+                  disabled={saving}
+                  className="btn-primary px-12"
+                >
+                  <Save className="w-5 h-5" />
+                  {saving ? 'Traitement...' : 'Confirmer'}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

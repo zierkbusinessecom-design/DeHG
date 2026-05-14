@@ -146,7 +146,7 @@ export function ProSelect({
                     )}
                   >
                     <div className="flex flex-col">
-                      <span className="text-xs font-black uppercase tracking-tight">{option.label}</span>
+                      <span className="text-xs font-black uppercase tracking-wide">{option.label}</span>
                       {option.subtext && <span className={cn("text-[9px] mt-0.5", value === option.value ? "text-white/70" : "text-muted-foreground group-hover/opt:text-white/50")}>{option.subtext}</span>}
                     </div>
                     {value === option.value && <Check className="w-4 h-4" />}

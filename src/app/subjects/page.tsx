@@ -12,8 +12,12 @@ import {
   FileText,
   Search,
   MoreVertical,
-  Library
+  Library,
+  Trash2,
+  Edit2
 } from 'lucide-react';
+import { Portal } from '@/components/Portal';
+import { useRef } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { cn } from '@/lib/utils';
 
@@ -26,14 +30,27 @@ export default function SubjectsPage() {
 
   const supabase = createClient();
 
+  const fetchSubjects = async () => {
+    setLoading(true);
+    const { data } = await supabase.from('subjects').select('*');
+    if (data) setSubjects(data);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    const fetchSubjects = async () => {
-      const { data } = await supabase.from('subjects').select('*');
-      if (data) setSubjects(data);
-      setLoading(false);
-    };
     fetchSubjects();
   }, []);
+
+  const handleDelete = async (id: string) => {
+    if (confirm("Voulez-vous vraiment supprimer cette matière ?")) {
+      const { error } = await supabase.from('subjects').delete().eq('id', id);
+      if (!error) {
+        fetchSubjects();
+      } else {
+        alert("Erreur lors de la suppression: " + error.message);
+      }
+    }
+  };
 
   const allSubjects = subjects.some(s => s.name === 'Le Noble Coran') 
     ? subjects 
@@ -108,8 +125,14 @@ export default function SubjectsPage() {
                       <span className="px-3 py-1 bg-primary/20 text-primary text-[9px] font-black rounded-full border border-primary/30 uppercase tracking-widest">Matière Système</span>
                     )}
                     {!isQuran && (
-                      <button className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-muted-foreground hover:text-white border border-white/10 transition-all">
-                        <MoreVertical className="w-5 h-5" />
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(subject.id);
+                        }}
+                        className="p-2.5 bg-red-500/10 hover:bg-red-500 rounded-xl text-red-500 hover:text-white border border-red-500/20 transition-all"
+                      >
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     )}
                   </div>
@@ -135,7 +158,10 @@ export default function SubjectsPage() {
                   </div>
   
                   {!isQuran ? (
-                    <button className="w-full py-4 rounded-[1.25rem] bg-white/5 hover:bg-primary text-white hover:text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/10 hover:border-primary shadow-lg hover:shadow-primary/20 relative z-10">
+                    <button 
+                      onClick={() => router.push(`/subjects/edit/${subject.id}`)}
+                      className="w-full py-4 rounded-[1.25rem] bg-white/5 hover:bg-primary text-white hover:text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/10 hover:border-primary shadow-lg hover:shadow-primary/20 relative z-10"
+                    >
                       Modifier le Programme
                     </button>
                   ) : (
@@ -152,5 +178,61 @@ export default function SubjectsPage() {
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function SubjectActions({ subject, onDelete }: { subject: any, onDelete: () => void }) {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (buttonRef.current) {
+      setButtonRect(buttonRef.current.getBoundingClientRect());
+    }
+    setIsOpen(!isOpen);
+  };
+
+  return (
+    <div className="relative">
+      <button 
+        ref={buttonRef}
+        onClick={toggleMenu}
+        className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-muted-foreground hover:text-white border border-white/10 transition-all shadow-sm"
+      >
+        <MoreVertical className="w-5 h-5" />
+      </button>
+
+      {isOpen && buttonRect && (
+        <Portal>
+          <div 
+            className="fixed inset-0 z-[9998]" 
+            onClick={() => setIsOpen(false)} 
+          />
+          <div 
+            className="fixed z-[9999] w-48 bg-[#121214] border border-white/10 rounded-2xl shadow-2xl overflow-hidden page-transition"
+            style={{ 
+              top: `${buttonRect.bottom + 8}px`, 
+              left: `${buttonRect.left - 150}px` 
+            }}
+          >
+            <button 
+              onClick={() => { router.push(`/subjects/edit/${subject.id}`); setIsOpen(false); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-white/5 transition-colors"
+            >
+              <Edit2 className="w-4 h-4 text-primary" /> Modifier
+            </button>
+            <button 
+              onClick={() => { onDelete(); setIsOpen(false); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" /> Supprimer
+            </button>
+          </div>
+        </Portal>
+      )}
+    </div>
   );
 }

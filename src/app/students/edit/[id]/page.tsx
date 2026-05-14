@@ -38,8 +38,7 @@ export default function EditStudentPage() {
     alphabet_book: 'Noorania',
     alphabet_page: 1,
     status: 'active',
-    parent_first_name: '',
-    parent_last_name: '',
+    parent_full_name: '',
     parent_phone: '',
     parent_address: '',
     parent_occupation: '',
@@ -72,8 +71,7 @@ export default function EditStudentPage() {
           alphabet_book: data.alphabet_book || 'Noorania',
           alphabet_page: data.alphabet_page || 1,
           status: data.status || 'active',
-          parent_first_name: parent?.first_name || '',
-          parent_last_name: parent?.last_name || '',
+          parent_full_name: `${parent?.first_name || ''} ${parent?.last_name || ''}`.trim(),
           parent_phone: rawParentPhone,
           parent_address: parent?.address || '',
           parent_occupation: parent?.occupation || '',
@@ -87,7 +85,13 @@ export default function EditStudentPage() {
         .select('name, book_name')
         .order('name');
       
-      if (subjectsData) setAvailableBooks(subjectsData);
+      if (subjectsData) {
+        let allBooks = subjectsData;
+        if (!allBooks.some(b => b.name === 'Le Noble Coran')) {
+          allBooks = [{ name: 'Le Noble Coran', book_name: 'Noble Coran' }, ...allBooks];
+        }
+        setAvailableBooks(allBooks);
+      }
 
       setLoading(false);
     };
@@ -128,8 +132,8 @@ export default function EditStudentPage() {
         const { error: parentError } = await supabase
           .from('parents')
           .update({
-            first_name: formData.parent_first_name,
-            last_name: formData.parent_last_name,
+            first_name: '',
+            last_name: formData.parent_full_name,
             phone: fullParentPhone,
             address: formData.parent_address,
             occupation: formData.parent_occupation
@@ -196,13 +200,9 @@ export default function EditStudentPage() {
                 <Users className="w-6 h-6 text-primary" /> Parent Responsable
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Prénom du Parent</label>
-                  <input className="input-field" value={formData.parent_first_name} onChange={e => setFormData(p => ({...p, parent_first_name: e.target.value}))} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nom du Parent</label>
-                  <input className="input-field" value={formData.parent_last_name} onChange={e => setFormData(p => ({...p, parent_last_name: e.target.value}))} />
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nom Complet du Parent</label>
+                  <input className="input-field" value={formData.parent_full_name} onChange={e => setFormData(p => ({...p, parent_full_name: e.target.value}))} />
                 </div>
                 <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-primary" /> Téléphone</label>
