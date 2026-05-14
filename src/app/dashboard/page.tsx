@@ -81,8 +81,13 @@ export default function Dashboard() {
     
     setLoading(true);
     try {
+      // RÉCUPÉRATION DU SCHOOL_ID (Comme dans le reste de l'application)
+      const { data: schoolData } = await supabase.from('schools').select('id').limit(1).maybeSingle();
+      const school_id = schoolData?.id || 'd8c1c1c1-c1c1-c1c1-c1c1-d8c1c1c1c1c1';
+
       const { error } = await supabase.from('disciplinary_records').insert({
         student_id: disciplineData.student_id,
+        school_id: school_id,
         date: disciplineData.date.toISOString().split('T')[0],
         description: disciplineData.description,
         type: disciplineData.type
