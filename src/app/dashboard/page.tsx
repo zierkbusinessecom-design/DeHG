@@ -96,14 +96,6 @@ export default function Dashboard() {
       if (error) throw error;
       
       setShowDisciplineModal(false);
-      setDisciplineData({
-        student_id: '',
-        group_id: 'all',
-        date: new Date(),
-        description: '',
-        type: ''
-      });
-      alert("Rapport enregistré avec succès");
     } catch (err: any) {
       alert("Erreur : " + err.message);
     } finally {
