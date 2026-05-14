@@ -12,6 +12,7 @@ import {
   isSameDay, 
   isSaturday, 
   isSunday,
+  addDays,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,22 @@ export function AnnualAttendanceCalendar({ attendanceHistory }: AnnualAttendance
     start: startOfYear(new Date(currentYear, 0, 1)),
     end: endOfYear(new Date(currentYear, 0, 1))
   });
+
+  const getNextSchoolDay = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // On cherche sur les 30 prochains jours le premier samedi/dimanche sans données
+    for (let i = 0; i < 30; i++) {
+      const d = addDays(today, i);
+      if (isSaturday(d) || isSunday(d)) {
+        const hasRecord = attendanceHistory.some(a => isSameDay(new Date(a.date), d));
+        if (!hasRecord) return d;
+      }
+    }
+    return null;
+  };
+
+  const nextSchoolDay = getNextSchoolDay();
 
   const getDayStatus = (date: Date) => {
     const record = attendanceHistory.find(a => isSameDay(new Date(a.date), date));
@@ -67,6 +84,10 @@ export function AnnualAttendanceCalendar({ attendanceHistory }: AnnualAttendance
           <div className="w-4 h-4 rounded-md bg-blue-500" />
           <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Hors Horaire</span>
         </div>
+        <div className="flex items-center gap-3">
+          <div className="w-4 h-4 rounded-md bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.5)] border-2 border-white" />
+          <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Prochain Cours</span>
+        </div>
       </div>
 
       {/* GRILLE INVERSÉE : MOIS EN HAUT, JOURS EN BAS */}
@@ -87,6 +108,7 @@ export function AnnualAttendanceCalendar({ attendanceHistory }: AnnualAttendance
 
                   const record = getDayStatus(date);
                   const isToday = isSameDay(date, new Date());
+                  const isNext = nextSchoolDay && isSameDay(date, nextSchoolDay);
                   
                   let colorClass = "bg-white/5 border border-white/5 text-white/20 hover:border-white/20";
                   
@@ -94,6 +116,8 @@ export function AnnualAttendanceCalendar({ attendanceHistory }: AnnualAttendance
                     if (record.status === 'present' && !record.is_exception) colorClass = "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20";
                     else if (record.status === 'late' && !record.is_exception) colorClass = "bg-orange-500 text-white shadow-lg shadow-orange-500/20";
                     else if (record.is_exception) colorClass = "bg-blue-500 text-white shadow-lg shadow-blue-500/20";
+                  } else if (isNext) {
+                    colorClass = "bg-yellow-400 text-black font-black shadow-[0_0_15px_rgba(250,204,21,0.4)] border-white scale-110 z-10";
                   }
 
                   return (

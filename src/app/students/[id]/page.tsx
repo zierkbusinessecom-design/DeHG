@@ -155,11 +155,6 @@ export default function StudentProfilePage() {
         if (bookError) throw bookError;
       }
 
-      if (quranError) {
-        console.error("SUPABASE ERROR:", quranError);
-        return;
-      }
-      
       setShowUpdateProgress(false);
       window.location.reload();
     } catch (err) {
@@ -182,6 +177,7 @@ export default function StudentProfilePage() {
     { id: 'attendance', label: 'Présences', icon: CalendarCheck },
     { id: 'discipline', label: 'Discipline', icon: ShieldAlert },
     { id: 'history', label: 'Historique', icon: History },
+    { id: 'payment', label: 'PAIEMENT', icon: CreditCard },
   ];
 
   return (
@@ -202,7 +198,7 @@ export default function StudentProfilePage() {
             <div>
               <h1 className="text-3xl font-black text-white tracking-tighter uppercase">{student.first_name} {student.last_name}</h1>
               <p className="text-primary font-bold text-sm tracking-widest uppercase opacity-80 flex items-center gap-2">
-                {student.groups?.name} — {student.groups?.session === 'morning' ? t.morning : t.afternoon}
+                {student.group_id === 'morning' ? 'Groupe A (Matin)' : 'Groupe B (Après-midi)'}
               </p>
             </div>
           </div>
@@ -274,7 +270,7 @@ export default function StudentProfilePage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className={cn(
             "space-y-8",
-            activeTab === 'attendance' ? "xl:col-span-3" : "xl:col-span-2"
+            activeTab === 'overview' ? "xl:col-span-2" : "xl:col-span-3"
           )}>
             {activeTab === 'overview' && (
               <>
@@ -327,81 +323,31 @@ export default function StudentProfilePage() {
                 {/* DÉTAILS DE L'ÉLÈVE (Enfant + Parent) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-                     <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
-                       <User className="w-5 h-5 text-primary" /> Identité & Responsable
-                     </h3>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                        <div className="flex flex-col border-b border-white/5 pb-3">
-                          <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Naissance</span>
-                          <span className="text-white text-xs font-black">{student.birth_date || 'N/A'}</span>
-                        </div>
-                        <div className="flex flex-col border-b border-white/5 pb-3">
-                          <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Genre</span>
-                          <span className="text-white text-xs font-black">{student.gender === 'M' ? 'Garçon' : 'Fille'}</span>
-                        </div>
-                        <div className="flex flex-col pt-2">
-                          <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Parent</span>
-                          <span className="text-white text-xs font-black uppercase">{parent?.last_name || 'N/A'}</span>
-                        </div>
-                        <div className="flex flex-col pt-2 border-b border-white/5 pb-3">
-                          <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Contact</span>
-                          <span className="text-primary text-xs font-black">{parent?.phone || 'N/A'}</span>
-                        </div>
-                        <div className="flex flex-col pt-2 border-b border-white/5 pb-3">
-                           <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Horaire</span>
-                           <span className="text-white text-xs font-black">{student.group_id === 'morning' ? 'Groupe A (Matin)' : 'Groupe B (Après-midi)'}</span>
-                        </div>
-                     </div>
-                  </div>
-
-                  {/* ÉTAT DES PAIEMENTS */}
-                  <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-                     <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
-                       <CreditCard className="w-5 h-5 text-primary" /> État Financier
-                     </h3>
-                     <div className="space-y-6">
-                        <div className="flex justify-between items-end border-b border-white/5 pb-4">
-                          <div>
-                            <p className="text-[10px] text-muted-foreground font-black uppercase mb-1">Payé</p>
-                            <p className="text-2xl font-black text-emerald-400">50.00 €</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-red-400 font-black uppercase mb-1">Dû</p>
-                            <p className="text-2xl font-black text-red-500">0.00 €</p>
-                          </div>
-                        </div>
-                        <div className="p-4 bg-white/5 rounded-2xl border border-white/5 flex justify-between items-center">
-                          <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Statut Scolarité</p>
-                          <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[9px] font-black rounded-full uppercase border border-emerald-500/20">À jour</span>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-
-                {/* Historique Financier (Largeur complète) */}
-                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 mt-6">
-                  <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
-                    <History className="w-5 h-5 text-primary" /> Historique Complet des Paiements
-                  </h3>
-                  <div className="bg-white/5 rounded-3xl border border-white/5 overflow-hidden">
-                     <table className="w-full text-left">
-                        <thead>
-                           <tr className="bg-white/5 text-[10px] font-black uppercase text-muted-foreground tracking-widest">
-                              <th className="px-6 py-4">Date</th>
-                              <th className="px-6 py-4">Libellé</th>
-                              <th className="px-6 py-4">Mode</th>
-                              <th className="px-6 py-4 text-right">Montant</th>
-                           </tr>
-                        </thead>
-                        <tbody className="text-xs font-bold text-white/80">
-                           <tr className="border-t border-white/5">
-                              <td className="px-6 py-4 font-bold text-white">07/05/2026</td>
-                              <td className="px-6 py-4">Frais d'inscription + Paiement Initial</td>
-                              <td className="px-6 py-4"><span className="px-2 py-1 bg-white/10 rounded-lg text-[10px]">CASH</span></td>
-                              <td className="px-6 py-4 text-right text-emerald-400 font-black">+50.00 €</td>
-                           </tr>
-                        </tbody>
-                     </table>
+                    <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
+                      <User className="w-5 h-5 text-primary" /> Identité & Responsable
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                      <div className="flex flex-col border-b border-white/5 pb-3">
+                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Naissance</span>
+                        <span className="text-white text-xs font-black">{student.birth_date || 'N/A'}</span>
+                      </div>
+                      <div className="flex flex-col border-b border-white/5 pb-3">
+                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Genre</span>
+                        <span className="text-white text-xs font-black">{student.gender === 'M' ? 'Garçon' : 'Fille'}</span>
+                      </div>
+                      <div className="flex flex-col pt-2">
+                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Parent</span>
+                        <span className="text-white text-xs font-black uppercase">{parent?.last_name || 'N/A'}</span>
+                      </div>
+                      <div className="flex flex-col pt-2 border-b border-white/5 pb-3">
+                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Contact</span>
+                        <span className="text-primary text-xs font-black">{parent?.phone || 'N/A'}</span>
+                      </div>
+                      <div className="flex flex-col pt-2 border-b border-white/5 pb-3">
+                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Horaire</span>
+                        <span className="text-white text-xs font-black">{student.group_id === 'morning' ? 'Groupe A (Matin)' : 'Groupe B (Après-midi)'}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </>
@@ -414,7 +360,6 @@ export default function StudentProfilePage() {
                       <BookOpen className="w-6 h-6 text-primary" /> Livres & Supports Étudiés
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* LE CORAN EN PREMIER */}
                       {quranTracking && (
                         <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20 space-y-4 relative overflow-hidden group">
                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
@@ -435,7 +380,6 @@ export default function StudentProfilePage() {
                            </div>
                         </div>
                       )}
-
                       {booksTracking.length > 0 ? booksTracking.map((book) => (
                         <div key={book.id} className="p-6 bg-white/5 rounded-3xl border border-white/5 space-y-4">
                            <div className="flex justify-between items-start">
@@ -474,13 +418,19 @@ export default function StudentProfilePage() {
               </div>
             )}
 
-
             {activeTab === 'grades' && (
-              <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-                 <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
-                   <GraduationCap className="w-6 h-6 text-primary" /> Évaluations & Examens
-                 </h3>
-                 <div className="bg-white/5 rounded-3xl border border-white/5 overflow-hidden">
+              <div className="space-y-6">
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20">
+                       <p className="text-[9px] text-primary font-black uppercase tracking-widest mb-1">Dernière Note</p>
+                       <p className="text-xl font-black text-white">8.5<span className="text-[10px] text-muted-foreground">/10</span></p>
+                    </div>
+                 </div>
+                 <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                  <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
+                    <GraduationCap className="w-6 h-6 text-primary" /> Évaluations & Examens
+                  </h3>
+                  <div className="bg-white/5 rounded-3xl border border-white/5 overflow-hidden">
                     <table className="w-full text-left border-collapse text-xs">
                        <thead>
                           <tr className="bg-white/5 text-[10px] font-black uppercase text-muted-foreground tracking-widest border-b border-white/5">
@@ -505,6 +455,7 @@ export default function StudentProfilePage() {
                           ))}
                        </tbody>
                     </table>
+                  </div>
                  </div>
               </div>
             )}
@@ -577,8 +528,20 @@ export default function StudentProfilePage() {
             )}
 
             {activeTab === 'attendance' && (
-              <div className="glass-card p-10 rounded-[2.5rem] border border-white/10">
-                <AnnualAttendanceCalendar attendanceHistory={attendanceHistory} />
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                   <div className="p-6 bg-emerald-500/10 rounded-3xl border border-emerald-500/20">
+                      <p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest mb-1">Présence Globale</p>
+                      <p className="text-xl font-black text-white">94%</p>
+                   </div>
+                   <div className="p-6 bg-amber-500/10 rounded-3xl border border-amber-500/20">
+                      <p className="text-[9px] text-amber-400 font-black uppercase tracking-widest mb-1">Retards</p>
+                      <p className="text-xl font-black text-white">2</p>
+                   </div>
+                </div>
+                <div className="glass-card p-10 rounded-[2.5rem] border border-white/10">
+                  <AnnualAttendanceCalendar attendanceHistory={attendanceHistory} />
+                </div>
               </div>
             )}
 
@@ -627,35 +590,87 @@ export default function StudentProfilePage() {
                  </div>
               </div>
             )}
-          </div>
 
-          <div className="space-y-8">
-            <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-               <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
-                 <ShieldCheck className="w-5 h-5 text-primary" /> État Général
-               </h3>
+            {activeTab === 'discipline' && (
                <div className="space-y-6">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Niveau</span>
-                    <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg">A+</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Assiduité</span>
-                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-black rounded-lg">98%</span>
-                  </div>
-                  <div className="pt-4 border-t border-white/5">
-                     <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-3 text-center">Dernière Remarque</p>
-                     <p className="text-xs text-white/70 italic text-center leading-relaxed">
-                        "{quranTracking?.history?.[quranTracking.history.length - 1]?.remarks || 'Élève sérieux.'}"
-                     </p>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                     <div className="p-6 bg-emerald-500/10 rounded-3xl border border-emerald-500/20">
+                        <p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest mb-1">Note de Comportement</p>
+                        <p className="text-xl font-black text-white">A+</p>
+                     </div>
                   </div>
                </div>
-            </div>
-            <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 text-center group cursor-pointer relative overflow-hidden" onClick={() => setShowQR(true)}>
-               <div className="flex justify-center mb-4"><QrCode className="w-12 h-12 text-primary" /></div>
-               <p className="text-white font-black uppercase text-xs">Badge QR</p>
-            </div>
+            )}
+
+            {activeTab === 'payment' && (
+               <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                       <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-1">Total Payé</p>
+                       <p className="text-3xl font-black text-emerald-400">50.00 €</p>
+                    </div>
+                    <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                       <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-1">Reste à Payer</p>
+                       <p className="text-3xl font-black text-red-500">0.00 €</p>
+                    </div>
+                    <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 flex items-center justify-center bg-emerald-500/5">
+                       <span className="px-6 py-2 bg-emerald-500/20 text-emerald-400 text-xs font-black rounded-full border border-emerald-500/30 uppercase">Scolarité à Jour</span>
+                    </div>
+                  </div>
+                  <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                    <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
+                      <CreditCard className="w-5 h-5 text-primary" /> Historique des Paiements
+                    </h3>
+                    <div className="bg-white/5 rounded-3xl border border-white/5 overflow-hidden">
+                       <table className="w-full text-left">
+                          <thead>
+                             <tr className="bg-white/5 text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                <th className="px-6 py-4">Date</th>
+                                <th className="px-6 py-4">Libellé</th>
+                                <th className="px-6 py-4">Mode</th>
+                                <th className="px-6 py-4 text-right">Montant</th>
+                             </tr>
+                          </thead>
+                          <tbody className="text-xs font-bold text-white/80">
+                             <tr className="border-t border-white/5">
+                                <td className="px-6 py-4 font-bold text-white">07/05/2026</td>
+                                <td className="px-6 py-4">Frais d'inscription + Paiement Initial</td>
+                                <td className="px-6 py-4"><span className="px-2 py-1 bg-white/10 rounded-lg text-[10px]">CASH</span></td>
+                                <td className="px-6 py-4 text-right text-emerald-400 font-black">+50.00 €</td>
+                             </tr>
+                          </tbody>
+                       </table>
+                    </div>
+                  </div>
+               </div>
+            )}
           </div>
+
+          {activeTab === 'overview' && (
+            <div className="space-y-8">
+              <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                 <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
+                   <ShieldCheck className="w-5 h-5 text-primary" /> État Général
+                 </h3>
+                 <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Niveau</span>
+                      <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg">A+</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Assiduité</span>
+                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-black rounded-lg">98%</span>
+                    </div>
+                    <div className="pt-4 border-t border-white/5">
+                       <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-3 text-center">Dernière Remarque</p>
+                       <p className="text-xs text-white/70 italic text-center leading-relaxed">
+                          "{quranTracking?.history?.[quranTracking.history.length - 1]?.remarks || 'Élève sérieux.'}"
+                       </p>
+                    </div>
+                 </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

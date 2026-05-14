@@ -46,31 +46,51 @@ export default function AttendancePage() {
   }, []);
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchData = async () => {
+      if (!date) return;
       setLoading(true);
-      // Récupération des élèves filtrés par le groupe
-      // Note: On suppose que la table students a une colonne group_id ou session
-      const { data } = await supabase
+      
+      // 1. Récupérer les élèves actifs
+      const { data: studentsData } = await supabase
         .from('students')
         .select('*')
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .eq('group_id', selectedGroup);
       
-      if (data) {
-        // Filtrage local en fonction du groupe (matin/après-midi)
-        const groupFiltered = data.filter(s => s.group_id === selectedGroup);
+      if (studentsData) {
+        setStudents(studentsData);
+        
+        // 2. Récupérer les présences déjà enregistrées pour cette date et ce groupe
+        const { data: existingAttendance } = await supabase
+          .from('attendances')
+          .select('*')
+          .eq('date', format(date, 'yyyy-MM-dd'))
+          .eq('session_type', selectedGroup);
 
-        setStudents(groupFiltered);
-        const initialAttendance: Record<string, any> = {};
-        groupFiltered.forEach(s => {
-          initialAttendance[s.id] = { status: 'present' };
+        const attendanceMap: Record<string, any> = {};
+        
+        // Initialiser tout le monde à présent par défaut (si rien en base)
+        studentsData.forEach(s => {
+          attendanceMap[s.id] = { status: 'present' };
         });
-        setAttendance(initialAttendance);
+
+        // Écraser avec les données réelles de la base
+        if (existingAttendance) {
+          existingAttendance.forEach(record => {
+            attendanceMap[record.student_id] = { 
+              status: record.status, 
+              arrival_time: record.arrival_time 
+            };
+          });
+        }
+        
+        setAttendance(attendanceMap);
       }
       setLoading(false);
     };
 
-    fetchStudents();
-  }, [selectedGroup]); // Se rafraîchit quand on change de groupe
+    fetchData();
+  }, [selectedGroup, date]); // Se rafraîchit si le groupe OU la date change
 
   const updateStatus = (studentId: string, status: string) => {
     setAttendance(prev => ({
