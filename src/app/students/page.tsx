@@ -20,6 +20,7 @@ export default function StudentsPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,9 +58,11 @@ export default function StudentsPage() {
     }
   };
 
-  const filteredStudents = students.filter(s => 
-    `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = `${s.first_name} ${s.last_name}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGroup = selectedGroup === 'all' || s.group_id === selectedGroup;
+    return matchesSearch && matchesGroup;
+  });
 
   return (
     <DashboardLayout>
@@ -71,7 +74,7 @@ export default function StudentsPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative w-80">
+            <div className="relative w-64">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input 
                 type="text"
@@ -85,6 +88,30 @@ export default function StudentsPage() {
               <UserPlus className="w-5 h-5" />
               {t.add_student}
             </Link>
+          </div>
+        </div>
+
+        {/* Barre de Filtres Secondaire */}
+        <div className="flex justify-end mb-6">
+          <div className="flex gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl shadow-xl">
+            {[
+              { id: 'all', label: 'Tous les élèves' },
+              { id: 'morning', label: 'Groupe A (Matin)' },
+              { id: 'afternoon', label: 'Groupe B (Après-midi)' }
+            ].map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setSelectedGroup(g.id)}
+                className={cn(
+                  "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-widest",
+                  selectedGroup === g.id 
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                    : "text-muted-foreground hover:text-white hover:bg-white/5"
+                )}
+              >
+                {g.label}
+              </button>
+            ))}
           </div>
         </div>
 
