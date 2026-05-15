@@ -70,7 +70,7 @@ export default function TeacherProfilePage() {
             </button>
             <button
               onClick={() => {
-                if (confirm("Supprimer ce professeur ?")) {
+                if (window.confirm("Supprimer ce professeur ?")) {
                   supabase.from('teachers').delete().eq('id', teacher.id).then(() => router.push('/teachers'));
                 }
               }}

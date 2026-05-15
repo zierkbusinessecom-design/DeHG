@@ -109,9 +109,7 @@ export default function Dashboard() {
 
   const stats = [
     { title: t.total_students, value: '1,284', trend: 12.5, icon: Users, color: 'bg-emerald-500' },
-    { title: t.attendance_today, value: '942', trend: 3.2, icon: CalendarCheck, color: 'bg-teal-500' },
-    { title: t.collected_fees, value: '12,450 €', trend: -2.4, icon: BadgeDollarSign, color: 'bg-green-600' },
-    { title: t.success_rate, value: '88%', trend: 4.1, icon: TrendingUp, color: 'bg-emerald-700' },
+    { title: "Présences Attendues", value: '942', trend: 3.2, icon: CalendarCheck, color: 'bg-teal-500' },
   ];
 
   const recentActivity = [
@@ -127,10 +125,6 @@ export default function Dashboard() {
         <div className="flex flex-wrap justify-between items-center gap-6 mb-10">
           <div>
             <h1 className="text-4xl font-black text-white tracking-tighter uppercase">{t.dashboard}</h1>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_10px_rgba(34,197,94,1)]" />
-              <p className="text-muted-foreground text-sm font-medium">{t.welcome_back}, Admin</p>
-            </div>
           </div>
           
           <div className="flex gap-3">
@@ -141,26 +135,10 @@ export default function Dashboard() {
               <ShieldAlert className="w-4 h-4" />
               Rapport Discipline
             </button>
-            <div className="flex gap-1.5 p-1.5 bg-card border border-white/5 rounded-2xl shadow-2xl">
-              {['all', 'A', 'B'].map((group) => (
-                <button
-                  key={group}
-                  onClick={() => setSelectedGroup(group)}
-                  className={cn(
-                    "px-5 py-2.5 rounded-xl text-[11px] font-black uppercase transition-all tracking-tighter",
-                    selectedGroup === group 
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
-                      : "text-muted-foreground hover:text-white hover:bg-white/5"
-                  )}
-                >
-                  {group === 'all' ? 'Vue Globale' : `Groupe ${group}`}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
           {stats.map((stat, i) => (
             <StatCard key={i} {...stat} />
           ))}
@@ -168,30 +146,23 @@ export default function Dashboard() {
 
         <div className="grid grid-cols-1 gap-8">
           <div className="glass-card p-8 rounded-3xl border border-white/5 overflow-hidden relative">
-            <div className="absolute right-0 top-0 p-8 opacity-5">
-              <Activity className="w-32 h-32 text-primary" />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-8 flex items-center gap-3">
-              <LayoutGrid className="w-5 h-5 text-primary" />
-              Statistiques de Présences
+            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+              <CalendarCheck className="w-5 h-5 text-primary" />
+              Prochaines Évaluations (Ce weekend)
             </h2>
-            <div className="h-96 flex items-end justify-between gap-8 px-2">
-               {[65, 45, 75, 85, 55, 95, 80, 70, 90, 60].map((val, i) => (
-                 <div key={i} className="flex-1 flex flex-col items-center gap-4 group">
-                   <div className="relative w-full">
-                     <div 
-                       className="w-full bg-primary/10 rounded-2xl border border-primary/20 relative group-hover:bg-primary/20 transition-all duration-500 overflow-hidden" 
-                       style={{ height: `${val * 3}px` }}
-                     >
-                       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-primary to-emerald-400 opacity-60 rounded-2xl group-hover:opacity-100 transition-all duration-500" style={{ height: '100%' }} />
-                     </div>
-                     <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-all">
-                       {val}%
-                     </div>
-                   </div>
-                   <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Jour {i+1}</span>
-                 </div>
-               ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                <p className="text-[10px] text-primary font-black uppercase mb-1">Samedi 17 Mai</p>
+                <p className="text-sm font-bold text-white">Test de Coran - Groupe A</p>
+              </div>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                <p className="text-[10px] text-primary font-black uppercase mb-1">Dimanche 18 Mai</p>
+                <p className="text-sm font-bold text-white">Examen d'Arabe - Groupe B</p>
+              </div>
+              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
+                <p className="text-[10px] text-muted-foreground font-black uppercase mb-1">Rappel</p>
+                <p className="text-sm font-bold text-white/60 italic">Réunion parents à 12h00</p>
+              </div>
             </div>
           </div>
         </div>
@@ -237,7 +208,7 @@ export default function Dashboard() {
 
                   <div className="md:col-span-2">
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-1">
-                       {filteredStudents.map(student => (
+                       {searchQuery.length > 0 ? filteredStudents.map(student => (
                          <button
                            key={student.id}
                            type="button"
@@ -251,7 +222,11 @@ export default function Dashboard() {
                          >
                            {student.first_name} {student.last_name}
                          </button>
-                       ))}
+                       )) : (
+                         <div className="col-span-3 py-6 text-center text-muted-foreground text-[10px] uppercase font-bold italic">
+                           Saisissez un nom pour trouver l'élève
+                         </div>
+                       )}
                     </div>
                   </div>
 

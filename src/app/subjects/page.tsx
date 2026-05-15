@@ -42,7 +42,7 @@ export default function SubjectsPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (confirm("Voulez-vous vraiment supprimer cette matière ?")) {
+    if (window.confirm("Voulez-vous vraiment supprimer cette matière ?")) {
       const { error } = await supabase.from('subjects').delete().eq('id', id);
       if (!error) {
         fetchSubjects();

@@ -38,6 +38,7 @@ export default function StudentProfilePage() {
   const router = useRouter();
   const [student, setStudent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [showQR, setShowQR] = useState(false);
   const [attendanceHistory, setAttendanceHistory] = useState<any[]>([]);
@@ -156,13 +157,87 @@ export default function StudentProfilePage() {
       }
 
       setShowUpdateProgress(false);
-      window.location.reload();
+      // Au lieu de recharger la page, on met à jour les données et on change d'onglet
+      setActiveTab('history'); 
+      fetchData(); // On appelle la fonction de rafraîchissement
     } catch (err) {
       console.error(err);
       alert("Erreur lors de la mise à jour.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    // 1. Étudiant
+    const { data: studentData } = await supabase
+      .from('students')
+      .select('*, student_parent(parents(*))')
+      .eq('id', id)
+      .single();
+    
+    if (studentData) setStudent(studentData);
+
+    // 2. Historique des présences
+    const { data: attendanceData } = await supabase
+      .from('attendances')
+      .select('*')
+      .eq('student_id', id)
+      .order('date', { ascending: false });
+    
+    if (attendanceData) setAttendanceHistory(attendanceData);
+
+    // 3. Suivi Coran
+    const { data: quranData } = await supabase
+      .from('student_quran_tracking')
+      .select('*')
+      .eq('student_id', id)
+      .single();
+    
+    if (quranData) setQuranTracking(quranData);
+
+    // 4. Suivi Livres
+    const { data: booksData } = await supabase
+      .from('student_books_tracking')
+      .select('*')
+      .eq('student_id', id);
+    
+    if (booksData) setBooksTracking(booksData);
+
+    // 5. Évaluations
+    const { data: evalData } = await supabase
+      .from('academic_evaluations')
+      .select('*')
+      .eq('student_id', id)
+      .order('evaluation_date', { ascending: false });
+    
+    if (evalData) setEvaluations(evalData);
+
+    // 6. Discipline
+    const { data: discData } = await supabase
+      .from('disciplinary_records')
+      .select('*')
+      .eq('student_id', id)
+      .order('date', { ascending: false });
+    
+    if (discData) setDisciplineRecords(discData);
+
+    setLoading(false);
+  };
+
+  const handleDeleteEvaluation = async (evalId: string) => {
+    if (!window.confirm("Supprimer cette évaluation ?")) return;
+    const { error } = await supabase.from('academic_evaluations').delete().eq('id', evalId);
+    if (error) alert("Erreur lors de la suppression");
+    else setEvaluations(prev => prev.filter(e => e.id !== evalId));
+  };
+
+  const handleDeleteDiscipline = async (discId: string) => {
+    if (!window.confirm("Supprimer ce rapport ?")) return;
+    const { error } = await supabase.from('disciplinary_records').delete().eq('id', discId);
+    if (error) alert("Erreur lors de la suppression");
+    else setDisciplineRecords(prev => prev.filter(d => d.id !== discId));
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-96"><div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div></DashboardLayout>;
@@ -172,11 +247,11 @@ export default function StudentProfilePage() {
 
   const tabs = [
     { id: 'overview', label: 'Vue Globale', icon: User },
-    { id: 'pedagogy', label: 'LIVRES', icon: BookOpen },
+    { id: 'pedagogy', label: 'MATIÈRES', icon: BookOpen },
     { id: 'grades', label: 'Notes', icon: GraduationCap },
     { id: 'attendance', label: 'Présences', icon: CalendarCheck },
     { id: 'discipline', label: 'Discipline', icon: ShieldAlert },
-    { id: 'history', label: 'Historique', icon: History },
+    { id: 'history', label: 'Progression', icon: History },
     { id: 'payment', label: 'PAIEMENT', icon: CreditCard },
   ];
 
@@ -234,12 +309,7 @@ export default function StudentProfilePage() {
               <QrCode className="w-5 h-5" />
             </button>
             <button 
-              onClick={async () => {
-                if(confirm("Supprimer ce dossier ?")) {
-                  await supabase.from('students').delete().eq('id', id);
-                  router.push('/students');
-                }
-              }}
+              onClick={() => setShowDeleteConfirm(true)}
               className="btn-secondary p-3.5 hover:text-red-400 transition-colors"
             >
               <Trash2 className="w-5 h-5" />
@@ -276,7 +346,7 @@ export default function StudentProfilePage() {
               <>
                 {/* NOTIFICATIONS / ÉVALUATIONS À VENIR */}
                 {evaluations.some(e => e.grade === null) && (
-                  <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-[2rem] relative overflow-hidden animate-pulse">
+                  <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-[2rem] relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                       <Clock className="w-12 h-12 text-amber-500" />
                     </div>
@@ -300,56 +370,7 @@ export default function StudentProfilePage() {
                   </div>
                 )}
 
-                {/* STATISTIQUES RAPIDES */}
-                <div className="md:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4 mb-2">
-                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-1">Présence</p>
-                      <p className="text-xl font-black text-white">94%</p>
-                   </div>
-                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-1">Retards</p>
-                      <p className="text-xl font-black text-amber-400">2</p>
-                   </div>
-                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-1">Comportement</p>
-                      <p className="text-xl font-black text-emerald-400">A+</p>
-                   </div>
-                   <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-1">Dernière Note</p>
-                      <p className="text-xl font-black text-primary">8.5<span className="text-[10px] text-muted-foreground">/10</span></p>
-                   </div>
-                </div>
 
-                {/* DÉTAILS DE L'ÉLÈVE (Enfant + Parent) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-                    <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
-                      <User className="w-5 h-5 text-primary" /> Identité & Responsable
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
-                      <div className="flex flex-col border-b border-white/5 pb-3">
-                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Naissance</span>
-                        <span className="text-white text-xs font-black">{student.birth_date || 'N/A'}</span>
-                      </div>
-                      <div className="flex flex-col border-b border-white/5 pb-3">
-                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Genre</span>
-                        <span className="text-white text-xs font-black">{student.gender === 'M' ? 'Garçon' : 'Fille'}</span>
-                      </div>
-                      <div className="flex flex-col pt-2">
-                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Parent</span>
-                        <span className="text-white text-xs font-black uppercase">{parent?.last_name || 'N/A'}</span>
-                      </div>
-                      <div className="flex flex-col pt-2 border-b border-white/5 pb-3">
-                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Contact</span>
-                        <span className="text-primary text-xs font-black">{parent?.phone || 'N/A'}</span>
-                      </div>
-                      <div className="flex flex-col pt-2 border-b border-white/5 pb-3">
-                        <span className="text-muted-foreground text-[10px] font-black uppercase mb-1">Horaire</span>
-                        <span className="text-white text-xs font-black">{student.group_id === 'morning' ? 'Groupe A (Matin)' : 'Groupe B (Après-midi)'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </>
             )}
 
@@ -360,26 +381,6 @@ export default function StudentProfilePage() {
                       <BookOpen className="w-6 h-6 text-primary" /> Livres & Supports Étudiés
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {quranTracking && (
-                        <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20 space-y-4 relative overflow-hidden group">
-                           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                              <BookMarked className="w-16 h-16" />
-                           </div>
-                           <div className="flex justify-between items-start relative z-10">
-                              <div>
-                                <p className="text-[10px] text-primary font-black uppercase tracking-widest">Matière Prioritaire</p>
-                                <h4 className="text-lg font-black text-white uppercase">Noble Coran</h4>
-                              </div>
-                              <span className="px-3 py-1 bg-primary text-white text-[10px] font-black rounded-lg shadow-lg">Juz {quranTracking.juz}</span>
-                           </div>
-                           <div className="flex items-center gap-4 relative z-10">
-                              <div className="flex-1">
-                                 <p className="text-[9px] text-muted-foreground font-black uppercase mb-1">Position Actuelle</p>
-                                 <p className="text-xs text-white font-bold">{quranTracking.surah} — Page {quranTracking.page}</p>
-                              </div>
-                           </div>
-                        </div>
-                      )}
                       {booksTracking.length > 0 ? booksTracking.map((book) => (
                         <div key={book.id} className="p-6 bg-white/5 rounded-3xl border border-white/5 space-y-4">
                            <div className="flex justify-between items-start">
@@ -392,20 +393,6 @@ export default function StudentProfilePage() {
                            <div className="space-y-2">
                               <p className="text-[10px] text-muted-foreground font-black uppercase">Progression & Remarques</p>
                               <p className="text-xs text-white/70 italic">"{book.remarks || 'Aucune remarque'}"</p>
-                           </div>
-                        </div>
-                      )) : student.alphabet_book ? student.alphabet_book.split(', ').map((bookName: string, idx: number) => (
-                        <div key={idx} className="p-6 bg-white/5 rounded-3xl border border-white/5 space-y-4">
-                           <div className="flex justify-between items-start">
-                              <div>
-                                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Inscrit</p>
-                                <h4 className="text-lg font-black text-white uppercase">{bookName}</h4>
-                              </div>
-                              <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg uppercase">En cours</span>
-                           </div>
-                           <div className="space-y-2">
-                              <p className="text-[10px] text-muted-foreground font-black uppercase">Statut</p>
-                              <p className="text-xs text-white/70 italic">Suivi pédagogique actif.</p>
                            </div>
                         </div>
                       )) : (
@@ -422,8 +409,13 @@ export default function StudentProfilePage() {
               <div className="space-y-6">
                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="p-6 bg-primary/10 rounded-3xl border border-primary/20">
-                       <p className="text-[9px] text-primary font-black uppercase tracking-widest mb-1">Dernière Note</p>
-                       <p className="text-xl font-black text-white">8.5<span className="text-[10px] text-muted-foreground">/10</span></p>
+                       <p className="text-[9px] text-primary font-black uppercase tracking-widest mb-1">Moyenne Générale</p>
+                       <p className="text-xl font-black text-white">
+                          {evaluations.filter(e => e.grade !== null).length > 0 
+                            ? (evaluations.filter(e => e.grade !== null).reduce((acc, curr) => acc + (curr.grade || 0), 0) / evaluations.filter(e => e.grade !== null).length).toFixed(1)
+                            : 'N/A'}
+                          <span className="text-[10px] text-muted-foreground">/10</span>
+                       </p>
                     </div>
                  </div>
                  <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
@@ -439,6 +431,7 @@ export default function StudentProfilePage() {
                              <th className="px-6 py-5">Matière</th>
                              <th className="px-6 py-5">Note</th>
                              <th className="px-6 py-5">Remarque Professeur</th>
+                             <th className="px-6 py-5 text-right">Actions</th>
                           </tr>
                        </thead>
                        <tbody className="text-white/80">
@@ -448,9 +441,43 @@ export default function StudentProfilePage() {
                                 <td className="px-6 py-5"><span className="px-2 py-1 bg-white/5 rounded border border-white/10 uppercase text-[9px]">{e.type}</span></td>
                                 <td className="px-6 py-5 uppercase font-black">{e.subject}</td>
                                 <td className="px-6 py-5 font-black text-primary text-lg">
-                                  {e.grade !== null ? `${e.grade}/10` : <span className="text-amber-500 text-xs">En attente</span>}
+                                   <input 
+                                     type="number" 
+                                     max="10" 
+                                     min="0"
+                                     step="0.5"
+                                     className="w-16 bg-white/5 border border-white/10 rounded px-2 py-1 text-primary font-black focus:outline-none focus:border-primary/50"
+                                     value={e.grade ?? ''}
+                                     placeholder="-"
+                                     onChange={async (el) => {
+                                       const val = el.target.value === '' ? null : Number(el.target.value);
+                                       const { error } = await supabase.from('academic_evaluations').update({ grade: val }).eq('id', e.id);
+                                       if (!error) {
+                                         setEvaluations(prev => prev.map(ev => ev.id === e.id ? {...ev, grade: val} : ev));
+                                       }
+                                     }}
+                                   />
+                                   <span className="text-[10px] text-muted-foreground ml-1">/10</span>
                                 </td>
-                                <td className="px-6 py-5 italic text-white/60">{e.remarks || '-'}</td>
+                                                                 <td className="px-6 py-5">
+                                   <textarea 
+                                     className="w-full bg-white/5 border border-white/10 rounded px-3 py-2 text-xs text-white/80 italic focus:outline-none focus:border-primary/50 min-h-[40px] resize-none"
+                                     value={e.remarks || ''}
+                                     placeholder="Notez ici..."
+                                     onChange={async (el) => {
+                                       const val = el.target.value;
+                                       const { error } = await supabase.from('academic_evaluations').update({ remarks: val }).eq('id', e.id);
+                                       if (!error) {
+                                         setEvaluations(prev => prev.map(ev => ev.id === e.id ? {...ev, remarks: val} : ev));
+                                       }
+                                     }}
+                                   />
+                                 </td>
+                                <td className="px-6 py-5 text-right">
+                                   <button onClick={() => handleDeleteEvaluation(e.id)} className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg transition-all">
+                                     <Trash2 className="w-4 h-4" />
+                                   </button>
+                                </td>
                              </tr>
                           ))}
                        </tbody>
@@ -474,8 +501,13 @@ export default function StudentProfilePage() {
                               <h4 className="text-sm font-black text-white uppercase mt-1">{rec.description}</h4>
                               <p className="text-xs text-muted-foreground mt-1">{rec.type}</p>
                            </div>
-                           <div className="px-4 py-2 bg-red-500/10 rounded-xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase">
-                              Sanction
+                           <div className="flex items-center gap-4">
+                              <div className="px-4 py-2 bg-red-500/10 rounded-xl border border-red-500/20 text-red-500 text-[10px] font-black uppercase">
+                                 Sanction
+                              </div>
+                              <button onClick={() => handleDeleteDiscipline(rec.id)} className="p-2 hover:bg-red-500/10 text-red-500 rounded-lg transition-all">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                            </div>
                         </div>
                       )) : (
@@ -484,44 +516,6 @@ export default function StudentProfilePage() {
                            <p className="text-muted-foreground font-bold italic">Aucun incident disciplinaire signalé.</p>
                         </div>
                       )}
-                   </div>
-                </div>
-
-                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-                   <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
-                     <Clock className="w-6 h-6 text-amber-500" /> Prochaines Évaluations
-                   </h3>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {evaluations.filter(e => e.grade === null).map((e, i) => (
-                         <div key={i} className="p-6 bg-amber-500/5 rounded-3xl border border-amber-500/10 flex flex-col justify-between">
-                            <div className="flex justify-between items-start mb-3">
-                               <span className="text-xs font-black text-amber-500 uppercase tracking-wide">{e.subject}</span>
-                               <span className="text-[9px] text-amber-500/60 font-bold">{new Date(e.evaluation_date).toLocaleDateString()}</span>
-                            </div>
-                            <p className="text-[11px] text-white/80 font-medium">Type: {e.type}</p>
-                            {e.remarks && <p className="text-[10px] text-white/50 italic mt-2 border-t border-white/5 pt-2">"{e.remarks}"</p>}
-                         </div>
-                      ))}
-                      {evaluations.filter(e => e.grade === null).length === 0 && (
-                        <p className="col-span-2 text-center text-muted-foreground italic py-10">Aucune évaluation programmée.</p>
-                      )}
-                   </div>
-                </div>
-
-                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-                   <h3 className="text-xl font-black text-white uppercase tracking-tight flex items-center gap-3 mb-8">
-                     <MessageSquare className="w-6 h-6 text-primary" /> Remarques des Évaluations passées
-                   </h3>
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {evaluations.filter(e => e.remarks && e.grade !== null).map((e, i) => (
-                        <div key={i} className="p-6 bg-white/5 rounded-3xl border border-white/5">
-                           <div className="flex justify-between items-start mb-3">
-                              <span className="text-xs font-black text-primary uppercase tracking-wide">{e.subject}</span>
-                              <span className="text-[9px] text-muted-foreground">{new Date(e.evaluation_date).toLocaleDateString()}</span>
-                           </div>
-                           <p className="text-xs text-white/80 italic">"{e.remarks}"</p>
-                        </div>
-                      ))}
                    </div>
                 </div>
               </div>
@@ -591,16 +585,7 @@ export default function StudentProfilePage() {
               </div>
             )}
 
-            {activeTab === 'discipline' && (
-               <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                     <div className="p-6 bg-emerald-500/10 rounded-3xl border border-emerald-500/20">
-                        <p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest mb-1">Note de Comportement</p>
-                        <p className="text-xl font-black text-white">A+</p>
-                     </div>
-                  </div>
-               </div>
-            )}
+
 
             {activeTab === 'payment' && (
                <div className="space-y-8">
@@ -740,6 +725,62 @@ export default function StudentProfilePage() {
            </div>
         </div>
       )}
-    </DashboardLayout>
+
+       {showDeleteConfirm && (
+         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+           <div className="glass-card w-full max-w-md p-10 rounded-[3rem] border border-white/10 text-center">
+             <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
+               <AlertCircle className="w-10 h-10 text-red-500" />
+             </div>
+             <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Supprimer ce dossier ?</h3>
+             <p className="text-muted-foreground font-medium mb-8">
+               Êtes-vous sûr de vouloir supprimer le dossier complet de <span className="text-white font-black uppercase">{student.first_name} {student.last_name}</span> ? Cette action est irréversible.
+             </p>
+             <div className="flex gap-4">
+               <button 
+                 onClick={() => setShowDeleteConfirm(false)}
+                 className="flex-1 btn-secondary py-4"
+               >
+                 Annuler
+               </button>
+               <button 
+                 onClick={async () => {
+                   setLoading(true);
+                   try {
+                     await supabase.from('academic_evaluations').delete().eq('student_id', id);
+                     await supabase.from('disciplinary_records').delete().eq('student_id', id);
+                     await supabase.from('attendances').delete().eq('student_id', id);
+                     await supabase.from('student_quran_tracking').delete().eq('student_id', id);
+                     await supabase.from('student_books_tracking').delete().eq('student_id', id);
+                     await supabase.from('student_parent').delete().eq('student_id', id);
+                     
+                     const { data: fees } = await supabase.from('student_fees').select('id').eq('student_id', id);
+                     if (fees && fees.length > 0) {
+                       const feeIds = fees.map(f => f.id);
+                       await supabase.from('payments').delete().in('student_fee_id', feeIds);
+                       await supabase.from('student_fees').delete().eq('student_id', id);
+                     }
+ 
+                     const { error } = await supabase.from('students').delete().eq('id', id);
+                     if (!error) {
+                       router.push('/students');
+                     } else {
+                       throw error;
+                     }
+                   } catch (error: any) {
+                     alert("Erreur lors de la suppression : " + error.message);
+                   } finally {
+                     setLoading(false);
+                   }
+                 }}
+                 className="flex-1 bg-red-600 hover:bg-red-700 text-white font-black uppercase py-4 rounded-2xl transition-all shadow-xl shadow-red-500/20"
+               >
+                 Supprimer
+               </button>
+             </div>
+           </div>
+         </div>
+       )}
+     </DashboardLayout>
   );
 }

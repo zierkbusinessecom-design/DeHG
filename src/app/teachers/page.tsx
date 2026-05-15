@@ -45,7 +45,7 @@ export default function TeachersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("Voulez-vous vraiment supprimer ce professeur ?")) {
+    if (window.confirm("Voulez-vous vraiment supprimer ce professeur ?")) {
       const { error } = await supabase.from('teachers').delete().eq('id', id);
       if (!error) {
         fetchTeachers();

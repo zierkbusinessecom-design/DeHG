@@ -23,6 +23,7 @@ export default function StudentsPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>('all');
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<{id: string, name: string} | null>(null);
 
   const supabase = createClient();
 
@@ -46,15 +47,36 @@ export default function StudentsPage() {
     fetchStudents();
   }, []);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Êtes-vous sûr de vouloir supprimer le dossier de ${name} ? Cette action est irréversible.`)) {
+  const handleDelete = async (id: string) => {
+    setLoading(true);
+    try {
+      // Supprimer les enregistrements liés
+      await supabase.from('academic_evaluations').delete().eq('student_id', id);
+      await supabase.from('disciplinary_records').delete().eq('student_id', id);
+      await supabase.from('attendances').delete().eq('student_id', id);
+      await supabase.from('student_quran_tracking').delete().eq('student_id', id);
+      await supabase.from('student_books_tracking').delete().eq('student_id', id);
+      await supabase.from('student_parent').delete().eq('student_id', id);
+      
+      const { data: fees } = await supabase.from('student_fees').select('id').eq('student_id', id);
+      if (fees && fees.length > 0) {
+        const feeIds = fees.map(f => f.id);
+        await supabase.from('payments').delete().in('student_fee_id', feeIds);
+        await supabase.from('student_fees').delete().eq('student_id', id);
+      }
+
       const { error } = await supabase.from('students').delete().eq('id', id);
+      
       if (!error) {
         setStudents(prev => prev.filter(s => s.id !== id));
-        alert("Élève supprimé avec succès.");
+        setDeleteConfirm(null);
       } else {
-        alert("Erreur lors de la suppression : " + error.message);
+        throw error;
       }
+    } catch (error: any) {
+      alert("Erreur lors de la suppression : " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -172,25 +194,28 @@ export default function StudentsPage() {
                     <td className="px-8 py-6">
                       <div className="flex items-center justify-end gap-2 transition-opacity">
                         <button 
+                          type="button"
                           onClick={() => router.push(`/students/${student.id}`)}
                           className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-muted-foreground hover:text-white transition-all border border-white/5 hover:border-white/10"
                           title={t.view}
                         >
-                          <Eye className="w-4.5 h-4.5" />
+                          <Eye className="w-4.5 h-4.5 pointer-events-none" />
                         </button>
                         <button 
+                          type="button"
                           onClick={() => router.push(`/students/edit/${student.id}`)}
                           className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-muted-foreground hover:text-primary transition-all border border-white/5 hover:border-white/10"
                           title={t.edit}
                         >
-                          <Edit2 className="w-4.5 h-4.5" />
+                          <Edit2 className="w-4.5 h-4.5 pointer-events-none" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(student.id, `${student.first_name} ${student.last_name}`)}
+                          type="button"
+                          onClick={() => setDeleteConfirm({ id: student.id, name: `${student.first_name} ${student.last_name}` })}
                           className="p-2.5 bg-white/5 hover:bg-red-500/10 rounded-xl text-muted-foreground hover:text-red-400 transition-all border border-white/5 hover:border-white/10"
                           title={t.delete}
                         >
-                          <Trash2 className="w-4.5 h-4.5" />
+                          <Trash2 className="w-4.5 h-4.5 pointer-events-none" />
                         </button>
                       </div>
                     </td>
@@ -200,6 +225,34 @@ export default function StudentsPage() {
             </tbody>
           </table>
         </div>
+
+        {deleteConfirm && (
+           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+             <div className="glass-card w-full max-w-md p-10 rounded-[3rem] border border-white/10 text-center">
+               <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30">
+                 <AlertCircle className="w-10 h-10 text-red-500" />
+               </div>
+               <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">Supprimer le dossier ?</h3>
+               <p className="text-muted-foreground font-medium mb-8">
+                 Êtes-vous sûr de vouloir supprimer le dossier de <span className="text-white font-black uppercase">{deleteConfirm.name}</span> ? Cette action est irréversible.
+               </p>
+               <div className="flex gap-4">
+                 <button 
+                   onClick={() => setDeleteConfirm(null)}
+                   className="flex-1 btn-secondary py-4"
+                 >
+                   Annuler
+                 </button>
+                 <button 
+                   onClick={() => handleDelete(deleteConfirm.id)}
+                   className="flex-1 bg-red-600 hover:bg-red-700 text-white font-black uppercase py-4 rounded-2xl transition-all shadow-xl shadow-red-500/20"
+                 >
+                   Supprimer
+                 </button>
+               </div>
+             </div>
+           </div>
+         )}
       </div>
     </DashboardLayout>
   );
