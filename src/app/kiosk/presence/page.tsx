@@ -176,7 +176,7 @@ export default function KioskPresencePage() {
       </div>
 
       {/* SCANNER VIEWPORT */}
-      <div className="relative w-full max-w-5xl aspect-[4/3] md:aspect-video bg-black rounded-[4rem] border-8 border-white/5 shadow-2xl overflow-hidden group">
+      <div className="relative w-full max-w-md aspect-square bg-black rounded-[4rem] border-8 border-white/5 shadow-2xl overflow-hidden group">
         {!cameraActive ? null : (
           <ScannerComponent onScan={handleScan} isProcessing={isProcessing} />
         )}
@@ -258,8 +258,8 @@ function ScannerComponent({ onScan, isProcessing }: { onScan: (res: string) => v
         
         const config = { 
           fps: 60, 
-          qrbox: { width: 450, height: 450 },
-          aspectRatio: 1.77778
+          qrbox: { width: 350, height: 350 },
+          aspectRatio: 1.0
         };
 
         await html5QrCode.start(
