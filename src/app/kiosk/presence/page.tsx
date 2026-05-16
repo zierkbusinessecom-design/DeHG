@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { format, isAfter, setHours, setMinutes } from 'date-fns';
-import { QrCode, AlertTriangle, ArrowLeft, CheckCircle2, Clock, XCircle, ShieldAlert } from 'lucide-react';
+import { QrCode, AlertTriangle, ArrowLeft, CheckCircle2, Clock, XCircle, ShieldAlert, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 export default function KioskPresencePage() {
   const [scanResult, setScanResult] = useState<{
-    status: 'success' | 'error' | 'warning' | 'idle' | 'already' | 'hors';
+    status: 'success' | 'error' | 'warning' | 'idle' | 'already' | 'hors' | 'early';
     message: string;
     studentName?: string;
   }>({ status: 'idle', message: 'Scanne ton badge' });
@@ -74,7 +74,8 @@ export default function KioskPresencePage() {
 
       const currentTime = new Date();
       const currentHour = currentTime.getHours();
-      let status: 'present' | 'late' = 'present';
+      const currentMinutes = currentTime.getMinutes();
+      let status: 'present' | 'late' | 'early' = 'present';
       let isException = false;
 
       const studentSession = student.group_id;
@@ -82,11 +83,19 @@ export default function KioskPresencePage() {
 
       if (studentSession !== kioskSession) isException = true;
 
-      const limitTime = studentSession === 'morning' 
-        ? setMinutes(setHours(new Date(), 9), 10)
-        : setMinutes(setHours(new Date(), 12), 10);
+      // Horaires: Groupe A = 9h00-12h00, Groupe B = 12h00-15h00
+      const earlyLimit = studentSession === 'morning' 
+        ? setMinutes(setHours(new Date(), 8), 30)   // Avant 8h30 = en avance
+        : setMinutes(setHours(new Date(), 11), 30);  // Avant 11h30 = en avance
       
-      if (isAfter(currentTime, limitTime)) status = 'late';
+      const lateLimit = studentSession === 'morning' 
+        ? setMinutes(setHours(new Date(), 9), 10)    // Après 9h10 = en retard
+        : setMinutes(setHours(new Date(), 12), 10);   // Après 12h10 = en retard
+
+      if (!isException) {
+        if (currentTime < earlyLimit) status = 'early';
+        else if (isAfter(currentTime, lateLimit)) status = 'late';
+      }
 
       const { error: insertError } = await supabase
         .from('attendances')
@@ -95,8 +104,8 @@ export default function KioskPresencePage() {
           student_id: student.id,
           date: today,
           session: kioskSession,
-          status: status,
-          arrival_time: format(currentTime, 'HH:mm:ss'),
+          status: status === 'early' ? 'present' : status,  // En base on stocke 'present' pour les early
+          arrival_time: status === 'late' ? format(currentTime, 'HH:mm:ss') : null,
           is_exception: isException,
           device_info: 'Borne Tablette'
         }, { onConflict: 'student_id,date' });
@@ -110,6 +119,13 @@ export default function KioskPresencePage() {
           studentName: student.first_name 
         });
         playSound('warning');
+      } else if (status === 'early') {
+        setScanResult({ 
+          status: 'early', 
+          message: 'En avance !', 
+          studentName: student.first_name 
+        });
+        playSound('success');
       } else if (status === 'late') {
         setScanResult({ 
           status: 'warning', 
@@ -143,6 +159,7 @@ export default function KioskPresencePage() {
       "fixed inset-0 overflow-hidden select-none font-sans transition-colors duration-500",
       isIdle && "bg-[#050505]",
       scanResult.status === 'success' && "bg-emerald-600",
+      scanResult.status === 'early' && "bg-violet-600",
       scanResult.status === 'warning' && "bg-orange-500",
       scanResult.status === 'hors' && "bg-blue-600",
       scanResult.status === 'already' && "bg-red-600",
@@ -214,6 +231,7 @@ export default function KioskPresencePage() {
         <div className="flex flex-col items-center gap-6 text-center px-8">
           {/* Icon */}
           {scanResult.status === 'success' && <CheckCircle2 className="w-28 h-28 text-white drop-shadow-2xl" />}
+          {scanResult.status === 'early' && <Zap className="w-28 h-28 text-white drop-shadow-2xl" />}
           {scanResult.status === 'warning' && <Clock className="w-28 h-28 text-white drop-shadow-2xl" />}
           {scanResult.status === 'hors' && <ShieldAlert className="w-28 h-28 text-white drop-shadow-2xl" />}
           {scanResult.status === 'already' && <XCircle className="w-28 h-28 text-white drop-shadow-2xl" />}
