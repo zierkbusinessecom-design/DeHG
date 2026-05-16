@@ -140,13 +140,13 @@ export default function AttendancePage() {
         date: format(date, 'yyyy-MM-dd'),
         status: attendance[s.id]?.status || 'absent',
         arrival_time: attendance[s.id]?.arrival_time || null,
-        session_type: selectedGroup
+        session: selectedGroup
       }));
 
       // On utilise upsert pour écraser si on ré-enregistre le même jour
       const { error } = await supabase
         .from('attendances')
-        .upsert(attendanceData, { onConflict: 'student_id, date, session_type' });
+        .upsert(attendanceData, { onConflict: 'student_id,date' });
 
       if (error) throw error;
       // alert("Présences enregistrées avec succès !");
