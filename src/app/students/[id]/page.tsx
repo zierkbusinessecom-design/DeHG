@@ -470,6 +470,75 @@ export default function StudentProfilePage() {
                      </div>
                   </div>
                 </div>
+
+                {/* HISTORIQUE DE PONCTUALITÉ */}
+                <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+                   <h3 className="text-sm font-black text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                     <CalendarCheck className="w-5 h-5 text-primary" /> Historique de Ponctualité
+                   </h3>
+                   {attendanceHistory.length > 0 ? (
+                     <div className="space-y-6">
+                       {/* Stats résumées */}
+                       <div className="grid grid-cols-4 gap-4">
+                         <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-center">
+                           <p className="text-2xl font-black text-emerald-400">{attendanceHistory.filter(a => a.status === 'present').length}</p>
+                           <p className="text-[8px] font-black text-emerald-400/70 uppercase tracking-widest mt-1">Présent</p>
+                         </div>
+                         <div className="p-4 bg-orange-500/10 rounded-2xl border border-orange-500/20 text-center">
+                           <p className="text-2xl font-black text-orange-400">{attendanceHistory.filter(a => a.status === 'late').length}</p>
+                           <p className="text-[8px] font-black text-orange-400/70 uppercase tracking-widest mt-1">Retard</p>
+                         </div>
+                         <div className="p-4 bg-red-500/10 rounded-2xl border border-red-500/20 text-center">
+                           <p className="text-2xl font-black text-red-400">{attendanceHistory.filter(a => a.status === 'absent').length}</p>
+                           <p className="text-[8px] font-black text-red-400/70 uppercase tracking-widest mt-1">Absent</p>
+                         </div>
+                         <div className="p-4 bg-primary/10 rounded-2xl border border-primary/20 text-center">
+                           <p className="text-2xl font-black text-primary">
+                             {attendanceHistory.length > 0 ? Math.round((attendanceHistory.filter(a => a.status === 'present' || a.status === 'late').length / attendanceHistory.length) * 100) : 0}%
+                           </p>
+                           <p className="text-[8px] font-black text-primary/70 uppercase tracking-widest mt-1">Assiduité</p>
+                         </div>
+                       </div>
+
+                       {/* 10 dernières présences */}
+                       <div className="space-y-2">
+                         <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">10 Dernières Présences</p>
+                         <div className="space-y-1.5">
+                           {attendanceHistory.slice(0, 10).map((a, i) => (
+                             <div key={i} className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/5 hover:bg-white/[0.05] transition-colors">
+                               <div className="flex items-center gap-3">
+                                 <div className={cn(
+                                   "w-2.5 h-2.5 rounded-full",
+                                   a.status === 'present' && "bg-emerald-500",
+                                   a.status === 'late' && "bg-orange-500",
+                                   a.status === 'absent' && "bg-red-500"
+                                 )} />
+                                 <span className="text-xs font-black text-white uppercase">{new Date(a.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                               </div>
+                               <div className="flex items-center gap-3">
+                                 {a.arrival_time && (
+                                   <span className="text-[10px] font-black text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20">
+                                     {a.arrival_time.substring(0, 5)}
+                                   </span>
+                                 )}
+                                 <span className={cn(
+                                   "text-[9px] font-black uppercase tracking-widest",
+                                   a.status === 'present' && "text-emerald-400",
+                                   a.status === 'late' && "text-orange-400",
+                                   a.status === 'absent' && "text-red-400"
+                                 )}>
+                                   {a.status === 'present' ? 'Présent' : a.status === 'late' ? 'Retard' : 'Absent'}
+                                 </span>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                     </div>
+                   ) : (
+                     <div className="text-center py-8 text-muted-foreground italic">Aucun historique de présence</div>
+                   )}
+                </div>
               </div>
             )}
 
