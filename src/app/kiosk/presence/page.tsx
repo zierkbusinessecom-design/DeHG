@@ -258,7 +258,11 @@ function ScannerComponent({ onScan, isProcessing }: { onScan: (res: string) => v
         
         const config = { 
           fps: 60, 
-          qrbox: { width: 350, height: 350 },
+          qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+            const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+            const qrboxSize = Math.floor(minEdgeSize * 0.8);
+            return { width: qrboxSize, height: qrboxSize };
+          },
           aspectRatio: 1.0
         };
 
