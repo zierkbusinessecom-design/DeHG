@@ -291,20 +291,64 @@ export default function GradesPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-           <div className="xl:col-span-3 space-y-8">
+        {/* RÉPARTITION - DÉPLACÉE EN HAUT */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+           <div className="glass-card p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+              <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-500" />
+              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-1 relative z-10">Taux de Réussite Global</p>
+              <div className="flex items-baseline gap-2 relative z-10">
+                 <p className={cn(
+                     "text-4xl font-black tracking-tighter",
+                     successRate >= 75 ? "text-emerald-400" :
+                     successRate >= 50 ? "text-amber-400" : "text-red-400"
+                  )}>
+                     {successRate}%
+                  </p>
+              </div>
+           </div>
+           
+           <div className="glass-card p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-1">Groupe A (Matin)</p>
+              <p className="text-3xl font-black text-white tracking-tighter">{rateA}%</p>
+           </div>
+           
+           <div className="glass-card p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group">
+              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-1">Groupe B (Après-Midi)</p>
+              <p className="text-3xl font-black text-white tracking-tighter">{rateB}%</p>
+           </div>
+           
+           <div className="glass-card p-6 rounded-[2rem] border border-white/5 relative overflow-hidden flex flex-col justify-center">
+              <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest mb-3">Moyenne Générale</p>
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                 <div 
+                     className={cn(
+                        "h-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
+                        rateGlobal >= 75 ? "bg-emerald-500" :
+                        rateGlobal >= 50 ? "bg-amber-500" : "bg-red-500"
+                     )} 
+                     style={{ width: `${rateGlobal}%` }} 
+                  />
+              </div>
+           </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-8">
+           <div className="space-y-8">
               <div className="glass-card p-10 rounded-[2.5rem] border border-white/5 relative overflow-hidden group">
-                 <div className="flex items-center justify-between mb-10">
+                 <div className="flex flex-wrap items-center justify-between gap-4 mb-10 relative z-10">
                     <h2 className="text-2xl font-black text-white uppercase tracking-tight flex items-center gap-4">
-                       <GraduationCap className="w-7 h-7 text-primary" /> Dernières Évaluations
+                       <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20 text-primary">
+                          <GraduationCap className="w-6 h-6" />
+                       </div>
+                       Dernières Évaluations
                     </h2>
-                    <div className="relative w-64">
+                    <div className="relative w-72">
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <input type="text" placeholder="Rechercher..." className="input-field py-2.5 pl-11" />
+                      <input type="text" placeholder="Rechercher une évaluation..." className="input-field py-3 pl-11" />
                     </div>
                  </div>
 
-                 <div className="overflow-x-auto">
+                 <div className="overflow-x-auto relative z-10">
                     <table className="w-full text-left border-collapse">
                        <thead>
                           <tr className="border-b border-white/5">
@@ -319,7 +363,7 @@ export default function GradesPage() {
                         <tbody className="divide-y divide-white/5">
                            {filteredEvaluations.length > 0 ? filteredEvaluations.map((item, i) => (
                               <tr key={i} className="group/row hover:bg-white/[0.02] transition-colors">
-                                 <td className="py-6">
+                                 <td className="py-6 pr-4">
                                     <div className="flex items-center gap-4">
                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-primary font-black border border-white/5 group-hover/row:scale-110 transition-transform">
                                           {item.students?.last_name?.[0] || '?'}
@@ -330,7 +374,7 @@ export default function GradesPage() {
                                        </div>
                                     </div>
                                  </td>
-                                 <td className="py-6">
+                                 <td className="py-6 pr-4">
                                     <span className={cn(
                                        "px-3 py-1.5 text-[9px] font-black rounded-lg uppercase border",
                                        item.type === 'Examen' ? "bg-red-500/10 text-red-400 border-red-500/20" :
@@ -340,9 +384,9 @@ export default function GradesPage() {
                                        {item.type}
                                     </span>
                                  </td>
-                                 <td className="py-6 text-sm text-white font-black uppercase tracking-tight">{item.subject}</td>
-                                 <td className="py-6 text-xs text-muted-foreground font-medium">{new Date(item.evaluation_date).toLocaleDateString()}</td>
-                                 <td className="py-6 text-center">
+                                 <td className="py-6 pr-4 text-sm text-white font-black uppercase tracking-tight">{item.subject}</td>
+                                 <td className="py-6 pr-4 text-xs text-muted-foreground font-medium">{new Date(item.evaluation_date).toLocaleDateString()}</td>
+                                 <td className="py-6 px-4 text-center">
                                     {editingId === item.id ? (
                                        <div className="flex items-center justify-center gap-2">
                                           <input 
@@ -350,7 +394,7 @@ export default function GradesPage() {
                                             max="10" 
                                             min="0" 
                                             step="0.5"
-                                            className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white font-black"
+                                            className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white font-black focus:outline-none focus:border-primary/50"
                                             value={tempGrade}
                                             onChange={(e) => setTempGrade(e.target.value)}
                                             autoFocus
@@ -382,10 +426,10 @@ export default function GradesPage() {
                                        </div>
                                     )}
                                  </td>
-                                 <td className="py-6 text-right">
+                                 <td className="py-6 pl-4 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                        {editingId === item.id ? (
-                                          <button onClick={() => setEditingId(null)} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:underline">Annuler</button>
+                                          <button onClick={() => setEditingId(null)} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:underline px-2">Annuler</button>
                                        ) : (
                                           <>
                                              <button 
@@ -417,49 +461,6 @@ export default function GradesPage() {
                            )}
                         </tbody>
                     </table>
-                 </div>
-              </div>
-           </div>
-
-           <div className="space-y-8">
-              <div className="glass-card p-8 rounded-[2.5rem] border border-white/5">
-                 <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight">Répartition</h3>
-                 <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                       <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Taux de Réussite</span>
-                       <span className={cn(
-                           "text-sm font-black",
-                           successRate >= 75 ? "text-emerald-400" :
-                           successRate >= 50 ? "text-amber-400" : "text-red-400"
-                        )}>
-                           {successRate}%
-                        </span>
-                    </div>
-                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                       <div 
-                           className={cn(
-                              "h-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
-                              successRate >= 75 ? "bg-emerald-500" :
-                              successRate >= 50 ? "bg-amber-500" : "bg-red-500"
-                           )} 
-                           style={{ width: `${successRate}%` }} 
-                        />
-                    </div>
-
-                    <div className="pt-6 border-t border-white/5 space-y-4">
-                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                           <span>Groupe A (Matin)</span>
-                           <span className="text-white font-black">{rateA}%</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                           <span>Groupe B (Après-midi)</span>
-                           <span className="text-white font-black">{rateB}%</span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                           <span>Moyenne Générale</span>
-                           <span className="text-white font-black">{rateGlobal}%</span>
-                        </div>
-                    </div>
                  </div>
               </div>
            </div>

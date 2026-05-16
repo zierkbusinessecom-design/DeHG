@@ -61,12 +61,6 @@ export default function SubjectsPage() {
     subject.book_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const sortedSubjects = [...filteredSubjects].sort((a, b) => {
-    if (a.name === 'Le Noble Coran') return -1;
-    if (b.name === 'Le Noble Coran') return 1;
-    return 0;
-  });
-
   return (
     <DashboardLayout>
       <div className="page-transition">
@@ -106,35 +100,22 @@ export default function SubjectsPage() {
               <p className="text-muted-foreground font-bold italic">Aucune matière enregistrée</p>
             </div>
           ) : (
-            sortedSubjects.map((subject) => {
-              const isQuran = subject.name === 'Le Noble Coran';
-              
+            filteredSubjects.map((subject) => {
               return (
-                <div key={subject.id} className={cn(
-                  "glass-card p-8 rounded-[2.5rem] border transition-all duration-500 group relative overflow-hidden",
-                  isQuran ? "border-primary/40 bg-primary/5 shadow-[0_0_40px_-10px_rgba(34,197,94,0.2)]" : "border-white/5 hover:border-primary/30"
-                )}>
+                <div key={subject.id} className="glass-card p-8 rounded-[2.5rem] border transition-all duration-500 group relative overflow-hidden border-white/5 hover:border-primary/30">
                   <div className="flex justify-between items-start mb-8 relative z-10">
-                    <div className={cn(
-                      "p-4 rounded-2xl border shadow-xl group-hover:scale-110 transition-transform duration-500",
-                      isQuran ? "bg-primary text-primary-foreground border-primary" : "bg-primary/10 border-primary/20 text-primary"
-                    )}>
+                    <div className="p-4 rounded-2xl border shadow-xl group-hover:scale-110 transition-transform duration-500 bg-primary/10 border-primary/20 text-primary">
                       <BookOpen className="w-7 h-7" />
                     </div>
-                    {isQuran && (
-                      <span className="px-3 py-1 bg-primary/20 text-primary text-[9px] font-black rounded-full border border-primary/30 uppercase tracking-widest">Matière Système</span>
-                    )}
-                    {!isQuran && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(subject.id);
-                        }}
-                        className="p-2.5 bg-red-500/10 hover:bg-red-500 rounded-xl text-red-500 hover:text-white border border-red-500/20 transition-all"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    )}
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(subject.id);
+                      }}
+                      className="p-2.5 bg-red-500/10 hover:bg-red-500 rounded-xl text-red-500 hover:text-white border border-red-500/20 transition-all"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
                   </div>
   
                   <div className="relative z-10 mb-8">
@@ -157,18 +138,12 @@ export default function SubjectsPage() {
                     </div>
                   </div>
   
-                  {!isQuran ? (
-                    <button 
-                      onClick={() => router.push(`/subjects/edit/${subject.id}`)}
-                      className="w-full py-4 rounded-[1.25rem] bg-white/5 hover:bg-primary text-white hover:text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/10 hover:border-primary shadow-lg hover:shadow-primary/20 relative z-10"
-                    >
-                      Modifier le Programme
-                    </button>
-                  ) : (
-                    <div className="w-full py-4 text-center rounded-[1.25rem] bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20">
-                      Matière Permanente
-                    </div>
-                  )}
+                  <button 
+                    onClick={() => router.push(`/subjects/edit/${subject.id}`)}
+                    className="w-full py-4 rounded-[1.25rem] bg-white/5 hover:bg-primary text-white hover:text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/10 hover:border-primary shadow-lg hover:shadow-primary/20 relative z-10"
+                  >
+                    Modifier le Programme
+                  </button>
   
                   <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500" />
                 </div>

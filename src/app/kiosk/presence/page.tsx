@@ -131,7 +131,7 @@ export default function KioskPresencePage() {
       } else {
         setScanResult({ 
           status: 'success', 
-          message: 'Enregistré', 
+          message: 'Bienvenue', 
           studentName: student.first_name 
         });
         playSound('success');
@@ -241,6 +241,9 @@ export default function KioskPresencePage() {
           80% { opacity: 1; }
           100% { top: 100%; opacity: 0; }
         }
+        #reader video {
+          transform: scaleX(-1) !important;
+        }
       `}</style>
     </div>
   );
@@ -248,6 +251,15 @@ export default function KioskPresencePage() {
 
 function ScannerComponent({ onScan, isProcessing }: { onScan: (res: string) => void, isProcessing: boolean }) {
   const [error, setError] = useState<string | null>(null);
+  
+  // Utiliser des refs pour éviter que le useEffect ne se relance à chaque changement
+  const onScanRef = useRef(onScan);
+  const isProcessingRef = useRef(isProcessing);
+  
+  useEffect(() => {
+    onScanRef.current = onScan;
+    isProcessingRef.current = isProcessing;
+  }, [onScan, isProcessing]);
 
   useEffect(() => {
     let html5QrCode: any;
@@ -267,7 +279,7 @@ function ScannerComponent({ onScan, isProcessing }: { onScan: (res: string) => v
           { facingMode: "environment" }, 
           config,
           (decodedText: string) => {
-            if (!isProcessing) onScan(decodedText);
+            if (!isProcessingRef.current) onScanRef.current(decodedText);
           },
           () => {} // Ignorer les échecs de lecture silencieusement
         );
@@ -280,11 +292,11 @@ function ScannerComponent({ onScan, isProcessing }: { onScan: (res: string) => v
     startScanner();
 
     return () => {
-      if (html5QrCode && html5QrCode.getState() === 2) { // 2 = SCANNING
-        html5QrCode.stop().catch(() => {});
+      if (html5QrCode && html5QrCode.isScanning) { 
+        html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
       }
     };
-  }, [onScan, isProcessing]);
+  }, []);
 
   if (error) {
     return (

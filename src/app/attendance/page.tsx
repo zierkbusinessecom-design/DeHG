@@ -243,7 +243,7 @@ export default function AttendancePage() {
                 <tr className="border-b border-white/5">
                   <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Élève</th>
                   <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center">Status de Présence</th>
-                  <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Détails</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Heure d'arrivée</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">

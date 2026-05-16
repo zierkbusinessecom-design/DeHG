@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useTranslation } from '@/context/TranslationContext';
 import { format } from 'date-fns';
+import { deleteDisciplinaryRecord, deleteAcademicEvaluation } from './actions';
 import { 
   User, 
   ChevronLeft, 
@@ -228,15 +229,15 @@ export default function StudentProfilePage() {
 
   const handleDeleteEvaluation = async (evalId: string) => {
     if (!window.confirm("Supprimer cette évaluation ?")) return;
-    const { error } = await supabase.from('academic_evaluations').delete().eq('id', evalId);
-    if (error) alert("Erreur lors de la suppression");
+    const res = await deleteAcademicEvaluation(evalId);
+    if (res.error) alert("Erreur lors de la suppression: " + res.error);
     else setEvaluations(prev => prev.filter(e => e.id !== evalId));
   };
 
   const handleDeleteDiscipline = async (discId: string) => {
     if (!window.confirm("Supprimer ce rapport ?")) return;
-    const { error } = await supabase.from('disciplinary_records').delete().eq('id', discId);
-    if (error) alert("Erreur lors de la suppression");
+    const res = await deleteDisciplinaryRecord(discId);
+    if (res.error) alert("Erreur lors de la suppression: " + res.error);
     else setDisciplineRecords(prev => prev.filter(d => d.id !== discId));
   };
 
@@ -340,13 +341,13 @@ export default function StudentProfilePage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className={cn(
             "space-y-8",
-            activeTab === 'overview' ? "xl:col-span-2" : "xl:col-span-3"
+            "xl:col-span-3"
           )}>
             {activeTab === 'overview' && (
-              <>
+              <div className="space-y-8">
                 {/* NOTIFICATIONS / ÉVALUATIONS À VENIR */}
                 {evaluations.some(e => e.grade === null) && (
-                  <div className="mb-8 p-6 bg-amber-500/10 border border-amber-500/20 rounded-[2rem] relative overflow-hidden">
+                  <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-[2rem] relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
                       <Clock className="w-12 h-12 text-amber-500" />
                     </div>
@@ -370,8 +371,106 @@ export default function StudentProfilePage() {
                   </div>
                 )}
 
+                {/* STATS RAPIDES (Pleine Largeur) */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                   <div className="glass-card p-6 rounded-[2rem] border border-emerald-500/20 bg-emerald-500/5 relative overflow-hidden group">
+                      <div className="absolute -right-6 -top-6 w-20 h-20 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
+                      <p className="text-[9px] text-emerald-400 font-black uppercase tracking-widest mb-1">Assiduité</p>
+                      <p className="text-3xl font-black text-white">
+                        {attendanceHistory.length > 0 ? Math.round((attendanceHistory.filter(a => a.status === 'present' || a.status === 'late').length / attendanceHistory.length) * 100) : 100}%
+                      </p>
+                   </div>
+                   <div className="glass-card p-6 rounded-[2rem] border border-primary/20 bg-primary/5 relative overflow-hidden group">
+                      <div className="absolute -right-6 -top-6 w-20 h-20 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all" />
+                      <p className="text-[9px] text-primary font-black uppercase tracking-widest mb-1">Moyenne Globale</p>
+                      <p className="text-3xl font-black text-white">
+                        {evaluations.filter(e => e.grade !== null).length > 0 
+                          ? (evaluations.filter(e => e.grade !== null).reduce((acc, curr) => acc + (curr.grade || 0), 0) / evaluations.filter(e => e.grade !== null).length).toFixed(1)
+                          : '-'}
+                        <span className="text-xs text-muted-foreground">/10</span>
+                      </p>
+                   </div>
+                   <div className="glass-card p-6 rounded-[2rem] border border-white/10 bg-white/5 relative overflow-hidden group">
+                      <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all" />
+                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-1">Progression Coran</p>
+                      <p className="text-lg font-black text-white uppercase leading-tight mt-1">
+                        Juz {quranTracking?.history?.[quranTracking.history.length - 1]?.juz || '30'}<br/>
+                        <span className="text-xs text-primary">{quranTracking?.history?.[quranTracking.history.length - 1]?.surah || 'An-Naba'}</span>
+                      </p>
+                   </div>
+                   <div className="glass-card p-6 rounded-[2rem] border border-white/10 bg-white/5 relative overflow-hidden group">
+                      <div className="absolute -right-6 -top-6 w-20 h-20 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all" />
+                      <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-1">Dernière Présence</p>
+                      <p className="text-xl font-black text-white uppercase mt-2">
+                        {attendanceHistory.length > 0 ? new Date(attendanceHistory[0].date).toLocaleDateString() : 'N/A'}
+                      </p>
+                      {attendanceHistory.length > 0 && (
+                        <p className={cn(
+                          "text-[10px] font-black uppercase tracking-widest mt-1",
+                          attendanceHistory[0].status === 'present' ? 'text-emerald-400' :
+                          attendanceHistory[0].status === 'late' ? 'text-amber-400' : 'text-red-400'
+                        )}>
+                          {attendanceHistory[0].status === 'present' ? 'Présent' : attendanceHistory[0].status === 'late' ? 'En Retard' : 'Absent'}
+                        </p>
+                      )}
+                   </div>
+                </div>
 
-              </>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* DERNIÈRE NOTE */}
+                  <div className="glass-card p-8 rounded-[2.5rem] border border-white/10 relative overflow-hidden">
+                     <h3 className="text-sm font-black text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                       <GraduationCap className="w-5 h-5 text-primary" /> Dernière Évaluation
+                     </h3>
+                     {evaluations.filter(e => e.grade !== null).length > 0 ? (
+                       <div className="flex justify-between items-center bg-black/20 p-6 rounded-3xl border border-white/5">
+                          <div>
+                             <p className="text-xl font-black text-white uppercase leading-none">{evaluations.filter(e => e.grade !== null)[0].subject}</p>
+                             <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-2">{new Date(evaluations.filter(e => e.grade !== null)[0].evaluation_date).toLocaleDateString()}</p>
+                          </div>
+                          <div className={cn(
+                            "px-5 py-3 rounded-2xl text-2xl font-black border",
+                            evaluations.filter(e => e.grade !== null)[0].grade >= 8 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.2)]" :
+                            evaluations.filter(e => e.grade !== null)[0].grade >= 5 ? "bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]" :
+                            "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+                          )}>
+                             {evaluations.filter(e => e.grade !== null)[0].grade}/10
+                          </div>
+                       </div>
+                     ) : (
+                       <div className="text-center py-6 text-muted-foreground italic">Aucune note pour le moment</div>
+                     )}
+                  </div>
+
+                  {/* BILAN GLOBAL */}
+                  <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
+                     <h3 className="text-sm font-black text-white mb-6 uppercase tracking-widest flex items-center gap-3">
+                       <ShieldCheck className="w-5 h-5 text-primary" /> Bilan Disciplinaire & Scolaire
+                     </h3>
+                     <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Scolarité (Paiement)</span>
+                          <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-black rounded-lg border border-emerald-500/20 uppercase">À Jour</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Discipline</span>
+                          <span className={cn(
+                            "px-3 py-1 text-[10px] font-black rounded-lg border uppercase",
+                            disciplineRecords.length === 0 ? "bg-primary/10 text-primary border-primary/20" : "bg-red-500/10 text-red-400 border-red-500/20"
+                          )}>
+                            {disciplineRecords.length === 0 ? "Exemplaire" : `${disciplineRecords.length} Signalement(s)`}
+                          </span>
+                        </div>
+                        <div className="pt-6 border-t border-white/5">
+                           <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-3 text-center">Dernière Remarque de Progression</p>
+                           <p className="text-xs text-white/80 italic text-center leading-relaxed">
+                              "{quranTracking?.history?.[quranTracking.history.length - 1]?.remarks || 'Élève sérieux, continuez ainsi.'}"
+                           </p>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {activeTab === 'pedagogy' && (
@@ -631,34 +730,9 @@ export default function StudentProfilePage() {
             )}
           </div>
 
-          {activeTab === 'overview' && (
-            <div className="space-y-8">
-              <div className="glass-card p-8 rounded-[2.5rem] border border-white/10">
-                 <h3 className="text-lg font-black text-white mb-6 uppercase tracking-tight flex items-center gap-3">
-                   <ShieldCheck className="w-5 h-5 text-primary" /> État Général
-                 </h3>
-                 <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Niveau</span>
-                      <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-lg">A+</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Assiduité</span>
-                      <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-black rounded-lg">98%</span>
-                    </div>
-                    <div className="pt-4 border-t border-white/5">
-                       <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest mb-3 text-center">Dernière Remarque</p>
-                       <p className="text-xs text-white/70 italic text-center leading-relaxed">
-                          "{quranTracking?.history?.[quranTracking.history.length - 1]?.remarks || 'Élève sérieux.'}"
-                       </p>
-                    </div>
-                 </div>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
-
       {showQR && (
         <StudentQRCode 
           studentId={student.id} 

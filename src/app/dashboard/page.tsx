@@ -52,6 +52,11 @@ export default function Dashboard() {
   const [students, setStudents] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   
+  const [dashboardStats, setDashboardStats] = useState({
+    totalStudents: 0,
+    attendancesToday: 0
+  });
+  
   const [disciplineData, setDisciplineData] = useState({
     student_id: '',
     group_id: 'all',
@@ -74,6 +79,23 @@ export default function Dashboard() {
   React.useEffect(() => {
     if (showDisciplineModal) fetchStudents();
   }, [showDisciplineModal, disciplineData.group_id]);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const [{ count: total }, { count: presents }] = await Promise.all([
+        supabase.from('students').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('attendances').select('*', { count: 'exact', head: true }).eq('date', today).in('status', ['present', 'late'])
+      ]);
+
+      setDashboardStats({
+        totalStudents: total || 0,
+        attendancesToday: presents || 0
+      });
+    };
+    fetchStats();
+  }, []);
 
   const handleCreateReport = async () => {
     if (!disciplineData.student_id) return alert("Sélectionnez un élève");
@@ -108,8 +130,8 @@ export default function Dashboard() {
   );
 
   const stats = [
-    { title: t.total_students, value: '1,284', trend: 12.5, icon: Users, color: 'bg-emerald-500' },
-    { title: "Présences Attendues", value: '942', trend: 3.2, icon: CalendarCheck, color: 'bg-teal-500' },
+    { title: t.total_students, value: dashboardStats.totalStudents.toString(), trend: 5.2, icon: Users, color: 'bg-emerald-500' },
+    { title: "Présences Aujourd'hui", value: dashboardStats.attendancesToday.toString(), trend: 2.1, icon: CalendarCheck, color: 'bg-teal-500' },
   ];
 
   const recentActivity = [
@@ -145,23 +167,33 @@ export default function Dashboard() {
         </div>
 
         <div className="grid grid-cols-1 gap-8">
-          <div className="glass-card p-8 rounded-3xl border border-white/5 overflow-hidden relative">
-            <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
-              <CalendarCheck className="w-5 h-5 text-primary" />
-              Prochaines Évaluations (Ce weekend)
+          <div className="glass-card p-8 rounded-[2.5rem] border border-white/5 overflow-hidden relative group">
+            <div className="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all duration-500" />
+            
+            <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-4 uppercase tracking-tight relative z-10">
+              <div className="p-3 bg-primary/10 rounded-2xl border border-primary/20 text-primary">
+                <Activity className="w-6 h-6" />
+              </div>
+              Activité & Événements Clés
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                <p className="text-[10px] text-primary font-black uppercase mb-1">Samedi 17 Mai</p>
-                <p className="text-sm font-bold text-white">Test de Coran - Groupe A</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+              <div className="p-6 bg-white/5 rounded-3xl border border-white/5 hover:border-white/10 transition-all">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 mb-4">
+                  <CalendarCheck className="w-5 h-5" />
+                </div>
+                <p className="text-[10px] text-amber-500 font-black uppercase mb-1 tracking-widest">À Venir Ce Weekend</p>
+                <p className="text-lg font-black text-white leading-tight">Évaluations Mensuelles</p>
+                <p className="text-xs text-muted-foreground mt-2 font-medium">Assurez-vous que les programmes ont été assignés aux élèves concernés.</p>
               </div>
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                <p className="text-[10px] text-primary font-black uppercase mb-1">Dimanche 18 Mai</p>
-                <p className="text-sm font-bold text-white">Examen d'Arabe - Groupe B</p>
-              </div>
-              <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                <p className="text-[10px] text-muted-foreground font-black uppercase mb-1">Rappel</p>
-                <p className="text-sm font-bold text-white/60 italic">Réunion parents à 12h00</p>
+              
+              <div className="p-6 bg-white/5 rounded-3xl border border-white/5 hover:border-white/10 transition-all">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 mb-4">
+                  <Users className="w-5 h-5" />
+                </div>
+                <p className="text-[10px] text-blue-500 font-black uppercase mb-1 tracking-widest">Information Importante</p>
+                <p className="text-lg font-black text-white leading-tight">Réunion des Parents</p>
+                <p className="text-xs text-muted-foreground mt-2 font-medium">Dimanche 18 Mai à 12h00 pour le groupe du matin.</p>
               </div>
             </div>
           </div>
