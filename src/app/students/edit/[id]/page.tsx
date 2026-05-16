@@ -176,12 +176,8 @@ export default function EditStudentPage() {
                 <User className="w-6 h-6 text-primary" /> État Civil
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Prénom</label>
-                  <input className="input-field" value={formData.first_name} onChange={e => setFormData(p => ({...p, first_name: e.target.value}))} required />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nom</label>
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nom Complet</label>
                   <input className="input-field" value={formData.last_name} onChange={e => setFormData(p => ({...p, last_name: e.target.value}))} required />
                 </div>
                 <ProDatePicker label="Date de Naissance" selected={formData.birth_date} onChange={d => setFormData(p => ({...p, birth_date: d}))} />

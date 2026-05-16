@@ -22,7 +22,7 @@ export default function KioskPresencePage() {
   }>({ status: 'idle', message: 'Scanne ton badge' });
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraActive, setCameraActive] = useState(true);
   const router = useRouter();
   const supabase = createClient();
   
@@ -78,7 +78,7 @@ export default function KioskPresencePage() {
       // 2. Récupérer l'élève
       const { data: student, error: studentError } = await supabase
         .from('students')
-        .select('*, groups(*)')
+        .select('*')
         .eq('id', scannedId)
         .single();
 
@@ -93,7 +93,7 @@ export default function KioskPresencePage() {
       let status: 'present' | 'late' = 'present';
       let isException = false;
 
-      const studentSession = student.groups?.session;
+      const studentSession = student.group_id;
       const kioskSession = currentHour < 12 ? 'morning' : 'afternoon';
 
       if (studentSession !== kioskSession) isException = true;
@@ -176,21 +176,8 @@ export default function KioskPresencePage() {
       </div>
 
       {/* SCANNER VIEWPORT */}
-      <div className="relative w-full max-w-sm aspect-square bg-black rounded-[4rem] border-8 border-white/5 shadow-2xl overflow-hidden group">
-        {!cameraActive ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xl z-30">
-             <button 
-              onClick={() => setCameraActive(true)}
-              className="bg-primary hover:bg-primary/90 text-white px-10 py-6 rounded-3xl font-black uppercase text-sm flex items-center gap-4 shadow-[0_0_50px_rgba(16,185,129,0.3)] transition-all active:scale-95"
-             >
-                <Camera className="w-6 h-6" />
-                Démarrer la Borne
-             </button>
-             <p className="mt-6 text-[9px] text-white/30 font-black uppercase tracking-widest text-center px-12 leading-relaxed">
-                Système sécurisé par scan biométrique QR.<br/>Compatible Tablette & Mobile.
-             </p>
-          </div>
-        ) : (
+      <div className="relative w-full max-w-2xl aspect-video md:aspect-[4/3] bg-black rounded-[4rem] border-8 border-white/5 shadow-2xl overflow-hidden group">
+        {!cameraActive ? null : (
           <ScannerComponent onScan={handleScan} isProcessing={isProcessing} />
         )}
         
@@ -213,7 +200,7 @@ export default function KioskPresencePage() {
               </div>
            </div>
          ) : (
-           <div className="flex flex-col items-center gap-6 opacity-30 animate-pulse">
+           <div className="flex flex-col items-center gap-6 opacity-50">
               <QrCode className="w-16 h-16 text-primary" />
               <p className="text-2xl font-black text-white uppercase tracking-[0.4em] italic">{scanResult.message}</p>
            </div>

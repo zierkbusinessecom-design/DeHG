@@ -59,8 +59,8 @@ export default function NewStudentPage() {
     const fetchData = async () => {
       // Charger les groupes fixes
       const groupOptions = [
-        { value: 'morning', label: t.group_a, subtext: '09h00 → 12h00' },
-        { value: 'afternoon', label: t.group_b, subtext: '12h00 → 15h00' }
+        { value: 'morning', label: 'Groupe A (Matin)' },
+        { value: 'afternoon', label: 'Groupe B (Après-midi)' }
       ];
       setGroups(groupOptions);
 
