@@ -248,6 +248,13 @@ export default function KioskPresencePage() {
           <p className="text-3xl font-black text-white/90 uppercase tracking-[0.2em]">
             {scanResult.message}
           </p>
+
+          {/* Heure d'arrivée */}
+          {(scanResult.status === 'success' || scanResult.status === 'early' || scanResult.status === 'warning') && (
+            <p className="text-xl font-black text-white/60 uppercase tracking-widest mt-2">
+              Arrivée à {format(new Date(), 'HH:mm')}
+            </p>
+          )}
         </div>
       </div>
 
