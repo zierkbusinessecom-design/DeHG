@@ -44,12 +44,12 @@ export default function KioskPresencePage() {
 
       const { data: existing } = await supabase
         .from('attendances')
-        .select('id, arrival_time')
+        .select('id, arrival_time, status')
         .eq('student_id', scannedId)
         .eq('date', today)
         .maybeSingle();
 
-      if (existing) {
+      if (existing && existing.status !== 'absent') {
         setScanResult({ 
           status: 'already', 
           message: 'Déjà pointé !', 
@@ -90,7 +90,7 @@ export default function KioskPresencePage() {
 
       const { error: insertError } = await supabase
         .from('attendances')
-        .insert([{
+        .upsert({
           school_id: student.school_id,
           student_id: student.id,
           date: today,
@@ -99,7 +99,7 @@ export default function KioskPresencePage() {
           arrival_time: format(currentTime, 'HH:mm:ss'),
           is_exception: isException,
           device_info: 'Borne Tablette'
-        }]);
+        }, { onConflict: 'student_id,date' });
 
       if (insertError) throw insertError;
 

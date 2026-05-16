@@ -7,7 +7,7 @@ import {
   CheckCircle2, 
   XCircle, 
   Clock, 
-  Save, 
+
   Users,
   Search,
   QrCode,
@@ -65,7 +65,7 @@ export default function AttendancePage() {
           .from('attendances')
           .select('*')
           .eq('date', format(date, 'yyyy-MM-dd'))
-          .eq('session_type', selectedGroup);
+          .eq('session', selectedGroup);
 
         const attendanceMap: Record<string, any> = {};
         
@@ -92,19 +92,47 @@ export default function AttendancePage() {
     fetchData();
   }, [selectedGroup, date]); // Se rafraîchit si le groupe OU la date change
 
-  const updateStatus = (studentId: string, status: string) => {
+  const updateStatus = async (studentId: string, status: string) => {
+    const arrivalTime = status === 'late' ? format(new Date(), 'HH:mm:ss') : null;
+    
+    // Mise à jour locale immédiate
     setAttendance(prev => ({
       ...prev,
       [studentId]: { ...prev[studentId], status, arrival_time: status === 'late' ? format(new Date(), 'HH:mm') : undefined }
     }));
+
+    // Sauvegarde en base immédiate
+    const student = students.find(s => s.id === studentId);
+    if (!student || !date) return;
+
+    await supabase.from('attendances').upsert({
+      student_id: studentId,
+      school_id: student.school_id,
+      date: format(date, 'yyyy-MM-dd'),
+      status,
+      arrival_time: arrivalTime,
+      session: selectedGroup
+    }, { onConflict: 'student_id,date' });
   };
 
-  const markAllPresent = () => {
+  const markAllPresent = async () => {
     const allPresent: Record<string, any> = {};
     students.forEach(s => {
       allPresent[s.id] = { status: 'present' };
     });
     setAttendance(allPresent);
+
+    // Sauvegarde en masse
+    if (!date) return;
+    const data = students.map(s => ({
+      student_id: s.id,
+      school_id: s.school_id,
+      date: format(date, 'yyyy-MM-dd'),
+      status: 'present',
+      arrival_time: null,
+      session: selectedGroup
+    }));
+    await supabase.from('attendances').upsert(data, { onConflict: 'student_id,date' });
   };
 
   const handleQRScan = (scannedId: string) => {
@@ -224,14 +252,6 @@ export default function AttendancePage() {
                    className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all"
                  >
                    <CheckCircle2 className="w-4 h-4" /> Tout présent
-                 </button>
-                 <button 
-                   onClick={handleSave}
-                   disabled={saving || students.length === 0}
-                   className="btn-primary px-10"
-                 >
-                   <Save className="w-5 h-5" />
-                   {saving ? '...' : t.save}
                  </button>
                </div>
             </div>
