@@ -176,14 +176,14 @@ export default function KioskPresencePage() {
       </div>
 
       {/* SCANNER VIEWPORT */}
-      <div className="relative w-full max-w-2xl aspect-video md:aspect-[4/3] bg-black rounded-[4rem] border-8 border-white/5 shadow-2xl overflow-hidden group">
+      <div className="relative w-full max-w-5xl aspect-[4/3] md:aspect-video bg-black rounded-[4rem] border-8 border-white/5 shadow-2xl overflow-hidden group">
         {!cameraActive ? null : (
           <ScannerComponent onScan={handleScan} isProcessing={isProcessing} />
         )}
         
         {/* LASER LINE */}
         {cameraActive && (
-          <div className="absolute top-0 left-0 right-0 h-1 bg-primary/80 shadow-[0_0_30px_#10b981] animate-[scan_2.5s_infinite] z-20 pointer-events-none" />
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-primary shadow-[0_0_40px_#10b981] animate-[scan_1.2s_linear_infinite] z-20 pointer-events-none" />
         )}
         
         {/* CORNERS */}
@@ -257,9 +257,9 @@ function ScannerComponent({ onScan, isProcessing }: { onScan: (res: string) => v
         html5QrCode = new Html5Qrcode("reader");
         
         const config = { 
-          fps: 20, 
-          qrbox: { width: 280, height: 280 },
-          aspectRatio: 1.0
+          fps: 60, 
+          qrbox: { width: 450, height: 450 },
+          aspectRatio: 1.77778
         };
 
         await html5QrCode.start(
