@@ -13,7 +13,8 @@ import {
   BadgeDollarSign, 
   BookMarked, 
   Settings,
-  LogOut
+  LogOut,
+  QrCode
 } from 'lucide-react';
 import { useTranslation } from '@/context/TranslationContext';
 import { cn } from '@/lib/utils';
@@ -32,13 +33,13 @@ const Sidebar = () => {
   };
 
   const menuItems = [
+    { icon: QrCode, label: "Scanner QR Code", href: '/kiosk/presence' },
     { icon: LayoutDashboard, label: t.dashboard, href: '/dashboard' },
     { icon: Users, label: t.students, href: '/students' },
     { icon: UserSquare2, label: t.teachers, href: '/teachers' },
     { icon: CalendarCheck, label: t.attendance, href: '/attendance' },
     { icon: GraduationCap, label: t.grades, href: '/grades' },
     { icon: BadgeDollarSign, label: t.finance, href: '/finance' },
-    { icon: BookMarked, label: t.quran, href: '/quran' },
     { icon: BookOpen, label: t.subjects, href: '/subjects' },
     { icon: Settings, label: t.settings, href: '/settings' },
   ];

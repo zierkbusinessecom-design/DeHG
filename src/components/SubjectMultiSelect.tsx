@@ -113,7 +113,7 @@ export function SubjectMultiSelect({ selectedValues, onChange, placeholder = "SÃ
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 z-50 glass-card border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-[#0a0a0c] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="p-3 border-b border-white/5 bg-white/5">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />

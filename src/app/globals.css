@@ -26,6 +26,16 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Cacher les flèches haut/bas des champs numériques */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 @layer base {
   :root {
     --primary: #10b981;

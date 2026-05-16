@@ -149,7 +149,7 @@ export default function AttendancePage() {
         .upsert(attendanceData, { onConflict: 'student_id, date, session_type' });
 
       if (error) throw error;
-      alert("Présences enregistrées avec succès !");
+      // alert("Présences enregistrées avec succès !");
     } catch (err: any) {
       console.error(err);
       alert("Erreur lors de la sauvegarde: " + err.message);
@@ -172,132 +172,164 @@ export default function AttendancePage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowScanner(true)}
-              className="flex items-center gap-3 bg-white/5 hover:bg-white/10 text-white px-8 py-3.5 rounded-2xl font-black text-sm transition-all border border-white/10 shadow-2xl"
-            >
-              <QrCode className="w-5 h-5 text-primary" />
-              {t.scan_qr}
-            </button>
             <ProDatePicker selected={date} onChange={setDate} className="w-56" />
-            <ProSelect value={selectedGroup} onChange={setSelectedGroup} options={groups} className="w-72" />
+            <div className="flex gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl shadow-xl">
+              {[
+                { id: 'morning', label: 'Groupe A (Matin)' },
+                { id: 'afternoon', label: 'Groupe B (Après-midi)' }
+              ].map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => setSelectedGroup(g.id)}
+                  className={cn(
+                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-widest",
+                    selectedGroup === g.id 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                      : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="glass-card rounded-[2.5rem] p-10 border border-white/5 relative overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-6 mb-12 relative z-10">
-            <div className="flex items-center gap-6">
-              <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20 shadow-xl">
-                <Users className="w-7 h-7 text-primary" />
+        <div className="glass-card rounded-[2.5rem] overflow-hidden border border-white/5 relative">
+          <div className="p-10 border-b border-white/5 bg-white/[0.02]">
+            <div className="flex flex-wrap items-center justify-between gap-6 relative z-10">
+              <div className="flex items-center gap-6">
+                <div className="p-4 rounded-2xl bg-primary/10 border border-primary/20">
+                  <Users className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-white tracking-tight uppercase">{selectedGroup === 'morning' ? 'Groupe A (Matin)' : 'Groupe B (Après-midi)'}</h2>
+                  <p className="text-sm text-muted-foreground font-medium italic">Séance du {format(date || new Date(), 'dd MMMM yyyy')}</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-black text-white tracking-tight uppercase">{t.groups} - {selectedGroup === 'morning' ? 'Groupe A' : 'Groupe B'}</h2>
-                <p className="text-sm text-muted-foreground font-medium italic">Enregistrement pour la séance du {format(date || new Date(), 'dd MMMM yyyy')}</p>
-              </div>
-            </div>
 
-             <div className="flex items-center gap-4">
-               <div className="relative w-64">
-                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                 <input 
-                   type="text"
-                   placeholder="Filtrer..."
-                   className="input-field py-2.5 pl-11"
-                   value={searchTerm}
-                   onChange={(e) => setSearchTerm(e.target.value)}
-                 />
+               <div className="flex items-center gap-4">
+                 <div className="relative w-64">
+                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                   <input 
+                     type="text"
+                     placeholder="Filtrer les élèves..."
+                     className="input-field py-2.5 pl-11"
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
+                   />
+                 </div>
+                 <button 
+                   onClick={markAllPresent}
+                   className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all"
+                 >
+                   <CheckCircle2 className="w-4 h-4" /> Tout présent
+                 </button>
+                 <button 
+                   onClick={handleSave}
+                   disabled={saving || students.length === 0}
+                   className="btn-primary px-10"
+                 >
+                   <Save className="w-5 h-5" />
+                   {saving ? '...' : t.save}
+                 </button>
                </div>
-               <button 
-                 onClick={markAllPresent}
-                 className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all"
-               >
-                 <CheckCircle2 className="w-4 h-4" /> Tout le monde présent
-               </button>
-               <button 
-                 onClick={handleSave}
-                 disabled={saving || students.length === 0}
-                 className="btn-primary px-10"
-               >
-                 <Save className="w-5 h-5" />
-                 {saving ? '...' : t.save}
-               </button>
-             </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 relative z-10">
-            {loading ? (
-              [...Array(8)].map((_, i) => <div key={i} className="h-44 bg-white/5 rounded-[2rem] animate-pulse border border-white/5" />)
-            ) : filteredStudents.length === 0 ? (
-              <div className="col-span-full py-32 text-center text-muted-foreground bg-white/2 rounded-[2rem] border border-dashed border-white/10">
-                <Users className="w-16 h-16 mx-auto mb-4 opacity-10" />
-                <p className="font-black uppercase tracking-widest italic">Aucun élève à afficher</p>
-              </div>
-            ) : (
-              filteredStudents.map((student) => {
-                const status = attendance[student.id]?.status;
-                const arrival = attendance[student.id]?.arrival_time;
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/5">
+                  <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Élève</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-center">Status de Présence</th>
+                  <th className="px-10 py-6 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Détails</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {loading ? (
+                  [...Array(6)].map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td colSpan={3} className="px-10 py-6"><div className="h-10 bg-white/5 rounded-xl w-full" /></td>
+                    </tr>
+                  ))
+                ) : filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} className="py-32 text-center text-muted-foreground">
+                       <Users className="w-16 h-16 mx-auto mb-4 opacity-10" />
+                       <p className="font-black uppercase tracking-widest italic">Aucun élève trouvé dans ce groupe</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((student) => {
+                    const status = attendance[student.id]?.status;
+                    const arrival = attendance[student.id]?.arrival_time;
 
-                return (
-                  <div key={student.id} className="glass-card p-6 rounded-[2.25rem] border border-white/5 hover:border-primary/40 transition-all duration-500 group relative overflow-hidden">
-                    {status === 'late' && (
-                      <div className="absolute top-0 right-0 p-3">
-                        <AlertCircle className="w-5 h-5 text-orange-500 animate-pulse" />
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center text-primary font-black text-xl border border-primary/10 group-hover:scale-110 transition-transform duration-500">
-                        {student.first_name[0]}
-                      </div>
-                      <div className="overflow-hidden">
-                        <p className="text-sm font-black text-white uppercase truncate">{student.last_name}</p>
-                        <p className="text-[10px] text-muted-foreground font-bold truncate uppercase tracking-widest">{student.first_name}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => updateStatus(student.id, 'present')}
-                        className={cn(
-                          "flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl text-[9px] font-black uppercase transition-all tracking-widest border",
-                          status === 'present' 
-                            ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20" 
-                            : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"
-                        )}
-                      >
-                        <CheckCircle2 className="w-4 h-4" /> {t.present}
-                      </button>
-                      <button
-                        onClick={() => updateStatus(student.id, 'absent')}
-                        className={cn(
-                          "flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl text-[9px] font-black uppercase transition-all tracking-widest border",
-                          status === 'absent' 
-                            ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20" 
-                            : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"
-                        )}
-                      >
-                        <XCircle className="w-4 h-4" /> {t.absent}
-                      </button>
-                      <button
-                        onClick={() => updateStatus(student.id, 'late')}
-                        className={cn(
-                          "flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl text-[9px] font-black uppercase transition-all tracking-widest border",
-                          status === 'late' 
-                            ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20" 
-                            : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"
-                        )}
-                      >
-                        <div className="relative">
-                          <Clock className="w-4 h-4" />
-                          {arrival && <span className="absolute -top-3 -right-3 text-[7px] font-black text-orange-400">{arrival}</span>}
-                        </div>
-                        {t.late}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                    return (
+                      <tr key={student.id} className="group hover:bg-white/[0.02] transition-colors">
+                        <td className="px-10 py-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-transparent flex items-center justify-center text-primary font-black text-lg border border-primary/10 group-hover:scale-110 transition-transform">
+                              {student.first_name[0]}
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-white uppercase">{student.last_name} {student.first_name}</p>
+                              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">ID: {student.id.substring(0, 8)}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-10 py-6">
+                           <div className="flex justify-center gap-3">
+                              <button
+                                onClick={() => updateStatus(student.id, 'present')}
+                                className={cn(
+                                  "px-6 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all tracking-widest border flex items-center gap-2",
+                                  status === 'present' 
+                                    ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20" 
+                                    : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"
+                                )}
+                              >
+                                <CheckCircle2 className="w-4 h-4" /> {t.present}
+                              </button>
+                              <button
+                                onClick={() => updateStatus(student.id, 'absent')}
+                                className={cn(
+                                  "px-6 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all tracking-widest border flex items-center gap-2",
+                                  status === 'absent' 
+                                    ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20" 
+                                    : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"
+                                )}
+                              >
+                                <XCircle className="w-4 h-4" /> {t.absent}
+                              </button>
+                              <button
+                                onClick={() => updateStatus(student.id, 'late')}
+                                className={cn(
+                                  "px-6 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all tracking-widest border flex items-center gap-2",
+                                  status === 'late' 
+                                    ? "bg-orange-500 text-white border-orange-500 shadow-lg shadow-orange-500/20" 
+                                    : "bg-white/5 text-slate-400 border-white/5 hover:bg-white/10"
+                                )}
+                              >
+                                <Clock className="w-4 h-4" /> {t.late}
+                              </button>
+                           </div>
+                        </td>
+                        <td className="px-10 py-6 text-right">
+                           {arrival ? (
+                             <span className="inline-flex items-center gap-2 px-3 py-1 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg text-[10px] font-black">
+                               <Clock className="w-3 h-3" /> {arrival}
+                             </span>
+                           ) : (
+                             <span className="text-[10px] text-muted-foreground font-medium">---</span>
+                           )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

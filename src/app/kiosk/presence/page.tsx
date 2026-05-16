@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { format, isAfter, setHours, setMinutes, startOfDay } from 'date-fns';
-import { QrCode, ShieldCheck, Clock, AlertTriangle, UserCheck, Camera, Volume2 } from 'lucide-react';
+import { QrCode, ShieldCheck, Clock, AlertTriangle, UserCheck, Camera, Volume2, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 // Sons encodés en Base64 pour être autonomes
@@ -22,6 +23,7 @@ export default function KioskPresencePage() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const router = useRouter();
   const supabase = createClient();
   
   // Audio Refs
@@ -154,11 +156,23 @@ export default function KioskPresencePage() {
       scanResult.status === 'error' && "bg-red-600"
     )}>
       {/* KIOSK HEADER */}
-      <div className="absolute top-10 flex flex-col items-center z-20">
-        <div className="w-20 h-20 bg-white rounded-3xl p-3 shadow-2xl mb-4 border border-white/10">
-          <img src="/DHG1.jpeg" alt="Logo" className="w-full h-full object-contain" />
+      <div className="absolute top-10 w-full px-10 flex items-center justify-between z-20">
+        <button 
+          onClick={() => router.push('/dashboard')}
+          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-2 rounded-xl border border-white/10 transition-all font-black text-[10px] uppercase tracking-widest"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Retour
+        </button>
+
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 bg-white rounded-2xl p-2.5 shadow-2xl mb-3 border border-white/10">
+            <img src="/DHG1.jpeg" alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          <p className="text-white/40 text-[8px] font-black uppercase tracking-[0.3em]">Borne de Présence</p>
         </div>
-        <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">Borne de Présence Intelligente</p>
+        
+        <div className="w-[100px]" /> {/* Spacer to balance the layout */}
       </div>
 
       {/* SCANNER VIEWPORT */}

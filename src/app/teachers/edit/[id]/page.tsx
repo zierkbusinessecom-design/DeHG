@@ -25,8 +25,7 @@ export default function EditTeacherPage() {
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
+    full_name: '',
     email: '',
     phone: '',
     specialty: '',
@@ -51,8 +50,7 @@ export default function EditTeacherPage() {
         if (rawPhone.startsWith('+32')) rawPhone = rawPhone.replace('+32', '').trim();
         
         setFormData({
-          first_name: data.profiles?.first_name || '',
-          last_name: data.profiles?.last_name || '',
+          full_name: `${data.profiles?.first_name || ''} ${data.profiles?.last_name || ''}`.trim(),
           email: data.profiles?.email || '',
           phone: rawPhone,
           specialty: data.specialty || '',
@@ -100,11 +98,15 @@ export default function EditTeacherPage() {
       if (teacherData?.profile_id) {
         // 2. Mettre à jour le profil
         const fullPhone = '+32' + formData.phone.replace(/\s/g, '');
+        const nameParts = formData.full_name.trim().split(/\s+/);
+        const first_name = nameParts[0] || '';
+        const last_name = nameParts.slice(1).join(' ') || '';
+
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
+            first_name,
+            last_name,
             email: formData.email,
             phone: fullPhone
           })
@@ -162,13 +164,9 @@ export default function EditTeacherPage() {
              </h2>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">{t.last_name}</label>
-                  <input required name="last_name" className="input-field" placeholder="Ex: DIALLO" value={formData.last_name} onChange={handleChange} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">{t.first_name}</label>
-                  <input required name="first_name" className="input-field" placeholder="Ex: Abdoulaye" value={formData.first_name} onChange={handleChange} />
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nom Complet</label>
+                  <input required name="full_name" className="input-field" placeholder="Ex: Abdoulaye DIALLO" value={formData.full_name} onChange={handleChange} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-primary" /> {t.email}</label>

@@ -15,7 +15,8 @@ import {
   Trash2,
   BookOpen,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Edit2
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase-client';
 import { ProSelect } from '@/components/ui/ProSelect';
@@ -32,9 +33,12 @@ export default function GradesPage() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [studentSearch, setStudentSearch] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
+  const [selectedGroup, setSelectedGroup] = useState('all');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [tempGrade, setTempGrade] = useState<string>('');
   
   const [newEval, setNewEval] = useState({
-    type: 'test',
+    type: 'evaluation',
     student_id: '',
     date: new Date(),
     isGroup: true,
@@ -57,7 +61,7 @@ export default function GradesPage() {
       // 2. Charger l'historique des évaluations
       const { data: evalData } = await supabase
         .from('academic_evaluations')
-        .select('*, students(first_name, last_name)')
+        .select('*, students(first_name, last_name, group_id)')
         .order('evaluation_date', { ascending: false });
       
       if (evalData) setEvaluations(evalData);
@@ -70,6 +74,98 @@ export default function GradesPage() {
     };
     fetchData();
   }, []);
+
+  const handleUpdateGrade = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('academic_evaluations')
+        .update({ grade: tempGrade === '' ? null : Number(tempGrade) })
+        .eq('id', id);
+      
+      if (error) throw error;
+      setEditingId(null);
+      // Rafraîchir les données
+      const { data: evalData } = await supabase
+        .from('academic_evaluations')
+        .select('*, students(first_name, last_name, group_id)')
+        .order('evaluation_date', { ascending: false });
+      if (evalData) setEvaluations(evalData);
+    } catch (err: any) {
+      alert("Erreur: " + err.message);
+    }
+  };
+
+  const handleDeleteEvaluation = async (id: string) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer cette épreuve ?")) return;
+    
+    try {
+      const { error } = await supabase
+        .from('academic_evaluations')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setEvaluations(prev => prev.filter(e => e.id !== id));
+    } catch (err: any) {
+      alert("Erreur lors de la suppression: " + err.message);
+    }
+  };
+
+  // Auto-fill logic for individual students
+  useEffect(() => {
+    const autoFillStudentData = async () => {
+      if (newEval.target === 'individual' && newEval.student_id) {
+        try {
+          const [booksRes, quranRes] = await Promise.all([
+            supabase.from('student_books_tracking').select('*').eq('student_id', newEval.student_id),
+            supabase.from('student_quran_tracking').select('*').eq('student_id', newEval.student_id).maybeSingle()
+          ]);
+
+          let autoSubjects = [];
+
+          // 1. Coran
+          if (quranRes.data) {
+            autoSubjects.push({
+              id: Date.now(),
+              subject: 'Le Noble Coran',
+              scope: {
+                start_juz: quranRes.data.juz?.toString() || '30',
+                start_surah: quranRes.data.surah || 'An-Naba',
+                start_page: quranRes.data.page?.toString() || '',
+                end_juz: quranRes.data.juz?.toString() || '30',
+                end_surah: quranRes.data.surah || 'An-Nas',
+                end_page: ''
+              }
+            });
+          }
+
+          // 2. Livres
+          if (booksRes.data && booksRes.data.length > 0) {
+            booksRes.data.forEach((book, idx) => {
+              autoSubjects.push({
+                id: Date.now() + idx + 1,
+                subject: book.book_name,
+                scope: {
+                  start_juz: '', start_surah: '',
+                  start_page: book.current_page?.toString() || '',
+                  end_juz: '', end_surah: '',
+                  end_page: ''
+                }
+              });
+            });
+          }
+
+          if (autoSubjects.length > 0) {
+            setNewEval(prev => ({ ...prev, selectedSubjects: autoSubjects }));
+          }
+        } catch (err) {
+          console.error("Auto-fill error:", err);
+        }
+      }
+    };
+    autoFillStudentData();
+  }, [newEval.student_id, newEval.target]);
 
   const handleCreateEvaluation = async () => {
     try {
@@ -130,9 +226,30 @@ export default function GradesPage() {
 
   const filteredStudentsForSearch = students.filter(s => {
     const matchesSearch = `${s.first_name} ${s.last_name}`.toLowerCase().includes(studentSearch.toLowerCase());
-    const matchesGroup = groupFilter === 'all' || (groupFilter === 'morning' ? !s.alphabet_book?.includes('midi') : s.alphabet_book?.includes('midi'));
+    const matchesGroup = groupFilter === 'all' || (groupFilter === 'morning' ? s.group_id === 'morning' : s.group_id === 'afternoon');
     return matchesSearch && matchesGroup;
   });
+
+  const filteredEvaluations = evaluations.filter(item => {
+    const matchesGroup = selectedGroup === 'all' || item.students?.group_id === selectedGroup;
+    return matchesGroup;
+  });
+
+  const gradedEvals = filteredEvaluations.filter(e => e.grade !== null && e.grade !== undefined);
+  const passedEvals = gradedEvals.filter(e => Number(e.grade) >= 5);
+  const successRate = gradedEvals.length > 0 ? Math.round((passedEvals.length / gradedEvals.length) * 100) : 0;
+
+  // Calculs pour la répartition détaillée
+  const getRateForGroup = (gid: string | 'all') => {
+    const evals = evaluations.filter(e => (gid === 'all' || e.students?.group_id === gid) && e.grade !== null && e.grade !== undefined);
+    if (evals.length === 0) return 0;
+    const passed = evals.filter(e => Number(e.grade) >= 5);
+    return Math.round((passed.length / evals.length) * 100);
+  };
+
+  const rateGlobal = getRateForGroup('all');
+  const rateA = getRateForGroup('morning');
+  const rateB = getRateForGroup('afternoon');
 
   return (
     <DashboardLayout>
@@ -143,13 +260,35 @@ export default function GradesPage() {
             <p className="text-muted-foreground text-sm font-medium mt-1">Évaluations, tests et examens trimestriels.</p>
           </div>
 
-          <button 
-            onClick={() => setShowAdd(true)}
-            className="btn-primary px-8"
-          >
-            <Plus className="w-5 h-5" />
-            Nouvelle Évaluation
-          </button>
+          <div className="flex items-center gap-4">
+            <div className="flex gap-1.5 p-1.5 bg-white/5 border border-white/10 rounded-2xl shadow-xl">
+              {[
+                { id: 'all', label: 'Tous les élèves' },
+                { id: 'morning', label: 'Groupe A (Matin)' },
+                { id: 'afternoon', label: 'Groupe B (Après-midi)' }
+              ].map((g) => (
+                <button
+                  key={g.id}
+                  onClick={() => setSelectedGroup(g.id)}
+                  className={cn(
+                    "px-6 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all tracking-widest",
+                    selectedGroup === g.id 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-105" 
+                      : "text-muted-foreground hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+            <button 
+              onClick={() => setShowAdd(true)}
+              className="btn-primary px-8"
+            >
+              <Plus className="w-5 h-5" />
+              Nouvelle Évaluation
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
@@ -178,7 +317,7 @@ export default function GradesPage() {
                           </tr>
                        </thead>
                         <tbody className="divide-y divide-white/5">
-                           {evaluations.length > 0 ? evaluations.map((item, i) => (
+                           {filteredEvaluations.length > 0 ? filteredEvaluations.map((item, i) => (
                               <tr key={i} className="group/row hover:bg-white/[0.02] transition-colors">
                                  <td className="py-6">
                                     <div className="flex items-center gap-4">
@@ -204,7 +343,26 @@ export default function GradesPage() {
                                  <td className="py-6 text-sm text-white font-black uppercase tracking-tight">{item.subject}</td>
                                  <td className="py-6 text-xs text-muted-foreground font-medium">{new Date(item.evaluation_date).toLocaleDateString()}</td>
                                  <td className="py-6 text-center">
-                                    {item.grade !== null && item.grade !== undefined ? (
+                                    {editingId === item.id ? (
+                                       <div className="flex items-center justify-center gap-2">
+                                          <input 
+                                            type="number" 
+                                            max="10" 
+                                            min="0" 
+                                            step="0.5"
+                                            className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm text-white font-black"
+                                            value={tempGrade}
+                                            onChange={(e) => setTempGrade(e.target.value)}
+                                            autoFocus
+                                          />
+                                          <button 
+                                            onClick={() => handleUpdateGrade(item.id)}
+                                            className="p-1.5 bg-primary/20 text-primary rounded-lg hover:bg-primary hover:text-white transition-colors"
+                                          >
+                                            <Save className="w-3.5 h-3.5" />
+                                          </button>
+                                       </div>
+                                    ) : item.grade !== null && item.grade !== undefined ? (
                                        <>
                                           <span className={cn(
                                              "text-lg font-black",
@@ -218,14 +376,38 @@ export default function GradesPage() {
                                     ) : (
                                        <div className="flex flex-col items-center gap-1">
                                           <div className="p-1.5 bg-white/5 rounded-lg border border-white/10">
-                                             <Clock className="w-4 h-4 text-amber-500 animate-pulse" />
+                                             <Clock className="w-4 h-4 text-amber-500" />
                                           </div>
                                           <span className="text-[8px] font-black text-amber-500/80 uppercase tracking-widest">En attente</span>
                                        </div>
                                     )}
                                  </td>
                                  <td className="py-6 text-right">
-                                    <button className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">Modifier</button>
+                                    <div className="flex items-center justify-end gap-2">
+                                       {editingId === item.id ? (
+                                          <button onClick={() => setEditingId(null)} className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:underline">Annuler</button>
+                                       ) : (
+                                          <>
+                                             <button 
+                                                onClick={() => {
+                                                   setEditingId(item.id);
+                                                   setTempGrade(item.grade?.toString() || '');
+                                                }}
+                                                className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary hover:text-white transition-all border border-primary/20"
+                                                title="Modifier"
+                                             >
+                                                <Edit2 className="w-4 h-4" />
+                                             </button>
+                                             <button 
+                                                onClick={() => handleDeleteEvaluation(item.id)}
+                                                className="p-2 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                                                title="Supprimer"
+                                             >
+                                                <Trash2 className="w-4 h-4" />
+                                             </button>
+                                          </>
+                                       )}
+                                    </div>
                                  </td>
                               </tr>
                            )) : (
@@ -245,10 +427,38 @@ export default function GradesPage() {
                  <div className="space-y-6">
                     <div className="flex items-center justify-between">
                        <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest">Taux de Réussite</span>
-                       <span className="text-sm font-black text-emerald-400">92%</span>
+                       <span className={cn(
+                           "text-sm font-black",
+                           successRate >= 75 ? "text-emerald-400" :
+                           successRate >= 50 ? "text-amber-400" : "text-red-400"
+                        )}>
+                           {successRate}%
+                        </span>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                       <div className="h-full bg-emerald-500 w-[92%] shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
+                       <div 
+                           className={cn(
+                              "h-full transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
+                              successRate >= 75 ? "bg-emerald-500" :
+                              successRate >= 50 ? "bg-amber-500" : "bg-red-500"
+                           )} 
+                           style={{ width: `${successRate}%` }} 
+                        />
+                    </div>
+
+                    <div className="pt-6 border-t border-white/5 space-y-4">
+                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                           <span>Groupe A (Matin)</span>
+                           <span className="text-white font-black">{rateA}%</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                           <span>Groupe B (Après-midi)</span>
+                           <span className="text-white font-black">{rateB}%</span>
+                        </div>
+                        <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                           <span>Moyenne Générale</span>
+                           <span className="text-white font-black">{rateGlobal}%</span>
+                        </div>
                     </div>
                  </div>
               </div>
@@ -267,12 +477,12 @@ export default function GradesPage() {
              <div className="max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <ProSelect 
-                   label="Type d'épreuve"
-                   value={newEval.type}
-                   onChange={(val) => setNewEval(p => ({...p, type: val}))}
-                   options={[{value: 'test', label: t.test}, {value: 'evaluation', label: t.evaluation}, {value: 'exam', label: t.exam}]}
-                />
+                 <ProSelect 
+                    label="Type d'épreuve"
+                    value={newEval.type}
+                    onChange={(val) => setNewEval(p => ({...p, type: val}))}
+                    options={[{value: 'evaluation', label: t.evaluation}, {value: 'exam', label: t.exam}]}
+                 />
                 <ProSelect 
                     label="Public visé"
                     value={newEval.target}

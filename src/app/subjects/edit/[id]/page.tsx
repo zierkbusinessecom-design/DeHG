@@ -74,10 +74,8 @@ export default function EditSubjectPage() {
         .from('subjects')
         .update({
           name: formData.name,
-          type: formData.type,
+          book_name: formData.name,
           description: formData.description,
-          book_name: formData.book_name,
-          level: formData.level,
           total_pages: Number(formData.total_pages)
         })
         .eq('id', id);
@@ -106,49 +104,28 @@ export default function EditSubjectPage() {
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Modifier la Matière</h1>
-            <p className="text-muted-foreground text-sm font-medium mt-1">Mise à jour des détails de la matière ou du livre.</p>
+            <h1 className="text-3xl font-black text-white tracking-tighter uppercase">Modifier le Livre</h1>
+            <p className="text-muted-foreground text-sm font-medium mt-1">Mise à jour des détails du livre.</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8 pb-20">
           <div className="glass-card p-10 rounded-[2.5rem] border border-white/10 relative overflow-hidden group">
              <div className="absolute -right-4 -top-4 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-all" />
-             <h2 className="text-xl font-black text-white mb-8 flex items-center gap-4 relative z-10 uppercase tracking-tight">
+              <h2 className="text-xl font-black text-white mb-8 flex items-center gap-4 relative z-10 uppercase tracking-tight">
                 <div className="p-3 bg-primary/10 rounded-2xl text-primary border border-primary/20">
                   <BookOpen className="w-6 h-6" />
                 </div>
-                Détails de la Matière
-             </h2>
+                Détails du Livre
+              </h2>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                 <div className="space-y-1.5 md:col-span-2">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nom de la Matière</label>
-                  <input required name="name" className="input-field" placeholder="Ex: Langue Arabe (Niveau 1)" value={formData.name} onChange={handleChange} />
+                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nom du livre</label>
+                  <input required name="name" className="input-field" placeholder="Ex: Al-Asas" value={formData.name} onChange={handleChange} />
                 </div>
                 
-                <ProSelect 
-                  label="Type de matière"
-                  value={formData.type}
-                  onChange={(val) => handleSelectChange('type', val)}
-                  options={[
-                    { value: 'academic', label: 'Académique' },
-                    { value: 'religious', label: 'Religieux' },
-                    { value: 'language', label: 'Langues' }
-                  ]}
-                />
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"><FileText className="w-3.5 h-3.5 text-primary" /> Nom du Livre</label>
-                  <input required name="book_name" className="input-field" placeholder="Ex: Al-Asas" value={formData.book_name} onChange={handleChange} />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1 flex items-center gap-2"><Layers className="w-3.5 h-3.5 text-primary" /> Niveau</label>
-                  <input required name="level" className="input-field" placeholder="Ex: Débutant, Intermédiaire..." value={formData.level} onChange={handleChange} />
-                </div>
-
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 md:col-span-2">
                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Nombre total de pages</label>
                   <input required type="number" name="total_pages" className="input-field" value={formData.total_pages} onChange={handleChange} />
                 </div>

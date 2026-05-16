@@ -28,6 +28,7 @@ export default function FinancePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [newPayment, setNewPayment] = useState({
+    group_id: 'all',
     student_id: '',
     amount: '',
     method: 'cash',
@@ -56,10 +57,10 @@ export default function FinancePage() {
       .order('payment_date', { ascending: false });
     if (payData) setPayments(payData);
 
-    // 2. Fetch Students for the selection
+    // 2. Fetch Students with group info
     const { data: stuData } = await supabase
       .from('students')
-      .select('id, first_name, last_name')
+      .select('id, first_name, last_name, group_id')
       .eq('status', 'active');
     if (stuData) setStudents(stuData);
 
@@ -68,23 +69,44 @@ export default function FinancePage() {
 
   const handleCreatePayment = async () => {
     if (!newPayment.student_id || !newPayment.amount) return alert("Veuillez remplir tous les champs");
+    
+    const amountToPay = Number(newPayment.amount);
     setSaving(true);
 
     try {
-      // 1. Trouver ou créer un student_fee pour cet élève
+      // 1. Vérifier le statut actuel et le montant restant
       const { data: feeData } = await supabase
         .from('student_fees')
-        .select('id')
+        .select('*, fees(amount_total)')
         .eq('student_id', newPayment.student_id)
-        .limit(1)
         .maybeSingle();
       
       let feeId = feeData?.id;
+      let amountTotal = feeData?.fees?.amount_total || 0;
+      let amountPaid = feeData?.amount_paid || 0;
+
+      if (feeId) {
+        if (feeData.status === 'paid') {
+          alert("L'enfant est déjà en ordre de paiement.");
+          setSaving(false);
+          return;
+        }
+
+        const remaining = amountTotal - amountPaid;
+        if (amountToPay > remaining) {
+          const surplus = amountToPay - remaining;
+          alert(`Attention : il y a un surplus de ${surplus} €. Il ne restait que ${remaining} € à payer.`);
+          // On peut décider de bloquer ou non, ici je bloque pour sécurité
+          setSaving(false);
+          return;
+        }
+      }
 
       if (!feeId) {
+        // Si pas de feeId, on en crée un
         const { data: newFee } = await supabase
           .from('student_fees')
-          .insert([{ student_id: newPayment.student_id, school_id, amount_paid: 0, status: 'partial' }])
+          .insert([{ student_id: newPayment.student_id, school_id, amount_paid: 0, status: 'unpaid' }])
           .select()
           .single();
         feeId = newFee?.id;
@@ -96,7 +118,7 @@ export default function FinancePage() {
         .insert([{
           student_fee_id: feeId,
           school_id,
-          amount: Number(newPayment.amount),
+          amount: amountToPay,
           method: newPayment.method,
           notes: newPayment.notes,
           payment_date: new Date().toISOString()
@@ -138,9 +160,8 @@ export default function FinancePage() {
   };
 
   const stats = [
-    { title: 'Total Collecté (Mois)', value: '4,850 €', icon: ArrowDownCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { title: 'Restant Dû Global', value: '1,240 €', icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/10' },
-    { title: 'Taux de Recouvrement', value: '78%', icon: Wallet, color: 'text-teal-400', bg: 'bg-teal-500/10' },
+    { title: 'Total Collecté (Mois)', value: '4850 €', icon: ArrowDownCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { title: 'Restant Dû Global', value: '1240 €', icon: Clock, color: 'text-orange-400', bg: 'bg-orange-500/10' },
   ];
 
   const filteredPayments = payments.filter(p => 
@@ -165,7 +186,7 @@ export default function FinancePage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
           {stats.map((stat, i) => (
             <div key={i} className="glass-card p-8 rounded-[2rem] border border-white/5 flex items-center gap-6 hover:border-primary/30 transition-all group overflow-hidden relative">
               <div className={cn("p-4 rounded-2xl border border-white/5 shadow-xl transition-transform group-hover:scale-110", stat.bg, stat.color)}>
@@ -200,12 +221,6 @@ export default function FinancePage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <button 
-                onClick={downloadCSV}
-                className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 text-muted-foreground hover:text-white border border-white/10 rounded-2xl transition-all"
-              >
-                <Download className="w-5 h-5" />
-              </button>
             </div>
           </div>
 
@@ -252,8 +267,8 @@ export default function FinancePage() {
                         </span>
                       </td>
                     </tr>
-                  )))
-                }
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -269,17 +284,35 @@ export default function FinancePage() {
              </h2>
              
              <div className="space-y-6">
-                <div className="space-y-1.5">
-                   <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Élève</label>
-                   <select 
-                     className="input-field py-3 bg-[#121216]"
-                     value={newPayment.student_id}
-                     onChange={(e) => setNewPayment(p => ({...p, student_id: e.target.value}))}
-                   >
-                     <option value="">Sélectionner un élève...</option>
-                     {students.map(s => <option key={s.id} value={s.id}>{s.last_name} {s.first_name}</option>)}
-                   </select>
-                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                       <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Filtrer par Groupe</label>
+                       <select 
+                         className="input-field py-3 bg-[#121216]"
+                         value={newPayment.group_id}
+                         onChange={(e) => setNewPayment(p => ({...p, group_id: e.target.value, student_id: ''}))}
+                       >
+                         <option value="all">Tous les groupes</option>
+                         <option value="morning">Groupe A (Matin)</option>
+                         <option value="afternoon">Groupe B (Après-midi)</option>
+                       </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                       <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Élève</label>
+                       <select 
+                         className="input-field py-3 bg-[#121216]"
+                         value={newPayment.student_id}
+                         onChange={(e) => setNewPayment(p => ({...p, student_id: e.target.value}))}
+                       >
+                         <option value="">Sélectionner un élève...</option>
+                         {students
+                           .filter(s => newPayment.group_id === 'all' || s.group_id === newPayment.group_id)
+                           .map(s => <option key={s.id} value={s.id}>{s.last_name} {s.first_name}</option>)
+                         }
+                       </select>
+                    </div>
+                 </div>
 
                 <div className="space-y-1.5">
                    <label className="text-[11px] font-black text-muted-foreground uppercase tracking-widest ml-1">Montant (€)</label>
