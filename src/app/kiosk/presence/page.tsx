@@ -310,19 +310,7 @@ export default function KioskPresencePage() {
             <ArrowLeft className="w-4 h-4" /> Retour
           </button>
 
-          {/* AUDIO STATUS BUTTON */}
-          <button
-            onClick={initAudio}
-            className={cn(
-              "flex items-center gap-2.5 px-5 py-3 rounded-2xl border transition-all font-black text-[10px] uppercase tracking-widest cursor-pointer",
-              soundEnabled 
-                ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" 
-                : "bg-amber-500/20 border-amber-500/30 text-amber-400 animate-pulse"
-            )}
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            {soundEnabled ? "Audio Actif" : "Touchez pour Son"}
-          </button>
+
           
           <div className="text-right">
             <p className="text-white font-black text-sm uppercase tracking-widest">{format(new Date(), 'HH:mm')}</p>
