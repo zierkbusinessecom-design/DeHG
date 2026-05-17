@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { format, isAfter, setHours, setMinutes } from 'date-fns';
-import { QrCode, AlertTriangle, ArrowLeft, CheckCircle2, Clock, XCircle, ShieldAlert, Zap, Users, LogOut, LogIn } from 'lucide-react';
+import { QrCode, AlertTriangle, ArrowLeft, CheckCircle2, Clock, XCircle, ShieldAlert, Zap, Users, LogOut, Volume2, VolumeX } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -15,31 +15,115 @@ export default function KioskPresencePage() {
   }>({ status: 'idle', message: 'Scanne ton badge' });
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const [mode, setMode] = useState<'arrival' | 'departure'>('arrival');
   const [arrivalCount, setArrivalCount] = useState(0);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
   const router = useRouter();
   const supabase = createClient();
-  
-  // Sons différents par statut
-  const audioSuccess = useRef<HTMLAudioElement | null>(null);
-  const audioEarly = useRef<HTMLAudioElement | null>(null);
-  const audioLate = useRef<HTMLAudioElement | null>(null);
-  const audioError = useRef<HTMLAudioElement | null>(null);
-  const audioDeparture = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    audioSuccess.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
-    audioEarly.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-    audioLate.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
-    audioError.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2955/2955-preview.mp3');
-    audioDeparture.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2867/2867-preview.mp3');
-  }, []);
-
-  const playSound = (type: 'success' | 'early' | 'late' | 'error' | 'departure') => {
-    const map = { success: audioSuccess, early: audioEarly, late: audioLate, error: audioError, departure: audioDeparture };
-    map[type]?.current?.play().catch(() => {});
+  // Initialisation Web Audio API (100% fiable, sans fichiers réseau)
+  const initAudio = () => {
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    setSoundEnabled(true);
   };
+
+  const playSynthesizedSound = useCallback((type: 'success' | 'early' | 'late' | 'error' | 'departure') => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      const now = ctx.currentTime;
+
+      if (type === 'success') {
+        // Accord joyeux ascendant (C5 -> E5 -> G5 -> C6)
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0, now + idx * 0.08);
+          gain.gain.linearRampToValueAtTime(0.25, now + idx * 0.08 + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.35);
+        });
+      } else if (type === 'early') {
+        // Arpège pétillant rapide
+        [659.25, 880, 1318.51].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+          gain.gain.setValueAtTime(0, now + idx * 0.06);
+          gain.gain.linearRampToValueAtTime(0.2, now + idx * 0.06 + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.06);
+          osc.stop(now + idx * 0.06 + 0.3);
+        });
+      } else if (type === 'late') {
+        // Alerte douce descendante
+        [440, 329.63].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.15);
+          gain.gain.setValueAtTime(0, now + idx * 0.15);
+          gain.gain.linearRampToValueAtTime(0.15, now + idx * 0.15 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.15 + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.15);
+          osc.stop(now + idx * 0.15 + 0.4);
+        });
+      } else if (type === 'departure') {
+        // Carillon descendant apaisant (C6 -> G5 -> E5 -> C5)
+        [1046.50, 783.99, 659.25, 523.25].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+          gain.gain.setValueAtTime(0, now + idx * 0.1);
+          gain.gain.linearRampToValueAtTime(0.25, now + idx * 0.1 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.1);
+          osc.stop(now + idx * 0.1 + 0.4);
+        });
+      } else if (type === 'error') {
+        // Buzzer d'erreur grave
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+    } catch (e) {
+      console.error('Erreur audio', e);
+    }
+  }, []);
 
   // Compteur en temps réel
   const fetchCounter = useCallback(async () => {
@@ -51,7 +135,7 @@ export default function KioskPresencePage() {
       .select('*', { count: 'exact', head: true })
       .eq('date', today)
       .eq('session', currentSession)
-      .in('status', ['present', 'late']);
+      .in('status', ['present', 'late', 'early']);
     
     const { count: total } = await supabase
       .from('students')
@@ -69,6 +153,7 @@ export default function KioskPresencePage() {
     return () => clearInterval(interval);
   }, [fetchCounter]);
 
+  // LOGIQUE DE SCAN INTELLIGENT (Borne Automatique)
   const handleScan = useCallback(async (scannedId: string) => {
     if (isProcessing || scanResult.status !== 'idle') return;
     
@@ -79,60 +164,70 @@ export default function KioskPresencePage() {
 
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
+      const currentTime = new Date();
+      const currentHour = currentTime.getHours();
 
-      // MODE DÉPART
-      if (mode === 'departure') {
-        const { data: student } = await supabase.from('students').select('*').eq('id', scannedId).single();
-        if (!student) {
-          setScanResult({ status: 'error', message: 'Badge inconnu' });
-          playSound('error');
-          setTimeout(() => setScanResult({ status: 'idle', message: 'Scanne ton badge' }), 2000);
-          return;
-        }
-
-        await supabase.from('attendances').update({
-          departure_time: format(new Date(), 'HH:mm:ss')
-        }).eq('student_id', scannedId).eq('date', today);
-
-        setScanResult({ status: 'departure', message: 'À demain !', studentName: student.first_name });
-        playSound('departure');
-        setTimeout(() => setScanResult({ status: 'idle', message: 'Scanne ton badge' }), 3500);
-        return;
-      }
-
-      // MODE ARRIVÉE
-      const { data: existing } = await supabase
-        .from('attendances')
-        .select('id, arrival_time, status')
-        .eq('student_id', scannedId)
-        .eq('date', today)
-        .maybeSingle();
-
-      if (existing && existing.status !== 'absent') {
-        setScanResult({ status: 'already', message: 'Déjà pointé !', studentName: '' });
-        playSound('error');
-        setTimeout(() => setScanResult({ status: 'idle', message: 'Scanne ton badge' }), 3000);
-        return;
-      }
-
+      // 1. Récupérer l'élève
       const { data: student, error: studentError } = await supabase
         .from('students').select('*').eq('id', scannedId).single();
 
       if (studentError || !student) {
         setScanResult({ status: 'error', message: 'Badge inconnu' });
-        playSound('error');
+        playSynthesizedSound('error');
         setTimeout(() => setScanResult({ status: 'idle', message: 'Scanne ton badge' }), 2000);
         return;
       }
 
-      const currentTime = new Date();
-      const currentHour = currentTime.getHours();
-      let status: 'present' | 'late' | 'early' = 'present';
-      let isException = false;
+      // 2. Vérifier si un pointage existe déjà aujourd'hui
+      const { data: existing } = await supabase
+        .from('attendances')
+        .select('id, arrival_time, departure_time, status')
+        .eq('student_id', scannedId)
+        .eq('date', today)
+        .maybeSingle();
 
-      const studentSession = student.group_id;
+      const studentSession = student.group_id; // 'morning' (9h-12h) ou 'afternoon' (12h-15h)
       const kioskSession = currentHour < 12 ? 'morning' : 'afternoon';
-      if (studentSession !== kioskSession) isException = true;
+      const isException = studentSession !== kioskSession;
+
+      // 3. DÉTERMINER ARRIVÉE VS DÉPART AUTOMATIQUEMENT
+      if (existing && existing.status !== 'absent') {
+        // Un pointage existe déjà pour aujourd'hui
+        let isDepartureTime = false;
+
+        if (studentSession === 'morning') {
+          // Groupe A : à partir de 11h15 on considère que c'est la sortie
+          if (currentHour >= 11) isDepartureTime = true;
+        } else {
+          // Groupe B : à partir de 14h15 on considère que c'est la sortie
+          if (currentHour >= 14) isDepartureTime = true;
+        }
+
+        if (isDepartureTime) {
+          if (existing.departure_time) {
+            setScanResult({ status: 'already', message: 'Départ déjà enregistré !', studentName: student.first_name });
+            playSynthesizedSound('error');
+          } else {
+            // Enregistrer la sortie
+            await supabase.from('attendances').update({
+              departure_time: format(currentTime, 'HH:mm:ss')
+            }).eq('id', existing.id);
+
+            setScanResult({ status: 'departure', message: 'À demain !', studentName: student.first_name });
+            playSynthesizedSound('departure');
+          }
+        } else {
+          // Pointage trop rapproché de l'arrivée
+          setScanResult({ status: 'already', message: 'Déjà pointé !', studentName: '' });
+          playSynthesizedSound('error');
+        }
+
+        setTimeout(() => setScanResult({ status: 'idle', message: 'Scanne ton badge' }), 3000);
+        return;
+      }
+
+      // 4. AUCUN POINTAGE EXISTANT -> ARRIVÉE
+      let status: 'present' | 'late' | 'early' = 'present';
 
       const earlyLimit = studentSession === 'morning' 
         ? setMinutes(setHours(new Date(), 8), 30) : setMinutes(setHours(new Date(), 11), 30);
@@ -160,43 +255,46 @@ export default function KioskPresencePage() {
 
       if (isException) {
         setScanResult({ status: 'hors', message: 'Hors horaire', studentName: student.first_name });
-        playSound('late');
+        playSynthesizedSound('late');
       } else if (status === 'early') {
         setScanResult({ status: 'early', message: 'En avance !', studentName: student.first_name });
-        playSound('early');
+        playSynthesizedSound('early');
       } else if (status === 'late') {
         setScanResult({ status: 'warning', message: 'En retard', studentName: student.first_name });
-        playSound('late');
+        playSynthesizedSound('late');
       } else {
         setScanResult({ status: 'success', message: 'Bienvenue !', studentName: student.first_name });
-        playSound('success');
+        playSynthesizedSound('success');
       }
 
       setTimeout(() => setScanResult({ status: 'idle', message: 'Scanne ton badge' }), 3500);
 
     } catch (err) {
       setScanResult({ status: 'error', message: 'Erreur' });
-      playSound('error');
+      playSynthesizedSound('error');
       setTimeout(() => setScanResult({ status: 'idle', message: 'Scanne ton badge' }), 3000);
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, scanResult.status, supabase, mode, fetchCounter]);
+  }, [isProcessing, scanResult.status, supabase, fetchCounter, playSynthesizedSound]);
 
   const isIdle = scanResult.status === 'idle';
 
   return (
-    <div className={cn(
-      "fixed inset-0 overflow-hidden select-none font-sans transition-colors duration-500",
-      isIdle && "bg-[#050505]",
-      scanResult.status === 'success' && "bg-emerald-600",
-      scanResult.status === 'early' && "bg-violet-600",
-      scanResult.status === 'warning' && "bg-orange-500",
-      scanResult.status === 'hors' && "bg-blue-600",
-      scanResult.status === 'already' && "bg-red-600",
-      scanResult.status === 'error' && "bg-red-700",
-      scanResult.status === 'departure' && "bg-sky-600"
-    )}>
+    <div 
+      onClick={initAudio} // Débloque l'audio au premier clic sur l'écran
+      className={cn(
+        "fixed inset-0 overflow-hidden select-none font-sans transition-colors duration-500",
+        isIdle && "bg-[#050505]",
+        scanResult.status === 'success' && "bg-emerald-600",
+        scanResult.status === 'early' && "bg-violet-600",
+        scanResult.status === 'warning' && "bg-orange-500",
+        scanResult.status === 'hors' && "bg-blue-600",
+        scanResult.status === 'already' && "bg-red-600",
+        scanResult.status === 'error' && "bg-red-700",
+        scanResult.status === 'departure' && "bg-sky-600"
+      )}
+    >
       
       {/* ===== IDLE VIEW: Scanner ===== */}
       <div className={cn(
@@ -212,18 +310,18 @@ export default function KioskPresencePage() {
             <ArrowLeft className="w-4 h-4" /> Retour
           </button>
 
-          {/* MODE TOGGLE */}
+          {/* AUDIO STATUS BUTTON */}
           <button
-            onClick={() => setMode(m => m === 'arrival' ? 'departure' : 'arrival')}
+            onClick={initAudio}
             className={cn(
-              "flex items-center gap-3 px-6 py-3 rounded-2xl border transition-all font-black text-[10px] uppercase tracking-widest",
-              mode === 'arrival' 
-                ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30" 
-                : "bg-sky-500/20 border-sky-500/30 text-sky-400 hover:bg-sky-500/30"
+              "flex items-center gap-2.5 px-5 py-3 rounded-2xl border transition-all font-black text-[10px] uppercase tracking-widest cursor-pointer",
+              soundEnabled 
+                ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" 
+                : "bg-amber-500/20 border-amber-500/30 text-amber-400 animate-pulse"
             )}
           >
-            {mode === 'arrival' ? <LogIn className="w-4 h-4" /> : <LogOut className="w-4 h-4" />}
-            {mode === 'arrival' ? 'Mode Arrivée' : 'Mode Départ'}
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            {soundEnabled ? "Audio Actif" : "Touchez pour Son"}
           </button>
           
           <div className="text-right">
@@ -235,21 +333,12 @@ export default function KioskPresencePage() {
         {/* SCANNER */}
         <div className="flex-1 flex items-center justify-center w-full">
           <div className="relative">
-            <div className={cn(
-              "relative w-[380px] h-[380px] bg-black rounded-3xl overflow-hidden border-2 shadow-2xl shadow-black/50",
-              mode === 'arrival' ? "border-white/10" : "border-sky-500/30"
-            )}>
+            <div className="relative w-[380px] h-[380px] bg-black rounded-3xl overflow-hidden border-2 border-white/10 shadow-2xl shadow-black/50">
               <ScannerComponent onScan={handleScan} isActive={isIdle} />
               
               {/* Laser */}
-              <div className={cn(
-                "absolute left-0 right-0 h-[2px] z-30 pointer-events-none kiosk-laser",
-                mode === 'arrival' ? "bg-primary" : "bg-sky-400"
-              )}
-                style={{ boxShadow: mode === 'arrival' 
-                  ? '0 0 12px 2px rgba(16,185,129,0.6), 0 0 40px 4px rgba(16,185,129,0.2)'
-                  : '0 0 12px 2px rgba(56,189,248,0.6), 0 0 40px 4px rgba(56,189,248,0.2)' 
-                }} 
+              <div className="absolute left-0 right-0 h-[2px] bg-primary z-30 pointer-events-none kiosk-laser"
+                style={{ boxShadow: '0 0 12px 2px rgba(16,185,129,0.6), 0 0 40px 4px rgba(16,185,129,0.2)' }} 
               />
 
               {/* Corners */}
@@ -258,15 +347,15 @@ export default function KioskPresencePage() {
                 'bottom-3 left-3 border-b-[3px] border-l-[3px] rounded-bl-xl',
                 'bottom-3 right-3 border-b-[3px] border-r-[3px] rounded-br-xl'
               ].map((c, i) => (
-                <div key={i} className={cn("absolute w-12 h-12 z-20 pointer-events-none", c, mode === 'arrival' ? 'border-primary' : 'border-sky-400')} />
+                <div key={i} className={cn("absolute w-12 h-12 z-20 pointer-events-none border-primary", c)} />
               ))}
             </div>
 
             {/* Idle Text */}
             <div className="mt-8 text-center flex flex-col items-center gap-3 opacity-40">
-              {mode === 'arrival' ? <QrCode className="w-8 h-8 text-primary" /> : <LogOut className="w-8 h-8 text-sky-400" />}
+              <QrCode className="w-8 h-8 text-primary" />
               <p className="text-white font-black text-sm uppercase tracking-[0.3em]">
-                {mode === 'arrival' ? 'Scanne ton badge' : 'Badge de sortie'}
+                Borne Murale — Arrivée & Départ Auto
               </p>
             </div>
           </div>
@@ -274,14 +363,12 @@ export default function KioskPresencePage() {
 
         {/* FOOTER WITH COUNTER */}
         <div className="w-full flex items-center justify-center gap-6 z-20">
-          {/* Counter */}
           <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl flex items-center gap-3">
             <Users className="w-4 h-4 text-primary" />
             <span className="text-white font-black text-[10px] uppercase tracking-widest">
               <span className="text-primary text-base">{arrivalCount}</span> / {totalStudents} élèves
             </span>
           </div>
-          {/* Session */}
           <div className="bg-white/5 border border-white/10 px-6 py-3 rounded-2xl flex items-center gap-3">
             <Clock className="w-4 h-4 text-primary" />
             <span className="text-white font-black text-[10px] uppercase tracking-widest">
